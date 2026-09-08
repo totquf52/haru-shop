@@ -1,5 +1,5 @@
 /* ===========================================================
-   하루상점 — 화면을 그리고 장바구니를 다루는 코드
+   하루살림 — 화면을 그리고 장바구니를 다루는 코드
    이 파일은 고치지 않아도 됩니다. (상품은 shop.js 에 있습니다)
    =========================================================== */
 
@@ -47,7 +47,7 @@ const Cart = {
 function paintChrome() {
   // 화면마다 제목이 달라야 검색에서 구분됩니다.
   // 그래서 제목을 통째로 바꾸지 않고 가게 이름만 갈아 끼웁니다.
-  document.title = document.title.replaceAll("하루상점", SHOP.name);
+  document.title = document.title.replaceAll("하루살림", SHOP.name);
 
   const brand = document.querySelector(".brand");
   if (brand) brand.textContent = SHOP.name;
