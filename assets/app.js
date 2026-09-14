@@ -24,6 +24,26 @@ const Cart = {
     Cart.write(items);
 
     // ▼ 여기에 「장바구니에 담았다」를 알리는 코드가 들어갑니다 (뒤 수업에서)
+    // 담은 상품의 이름과 가격을 상품 목록에서 찾아 온다
+    const p = findProduct(id);
+    // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
+    window.dataLayer = window.dataLayer || [];
+    // 앞에서 넣은 상품 값이 섞이지 않게 먼저 비운다
+    dataLayer.push({ ecommerce: null });
+    // 통로 끝에 한 덩어리를 넣는다 - 넣는 순간이 태그 관리자가 듣는 순간
+    dataLayer.push({
+      // 무슨 일이 일어났나 - 계획서 이름 글자 그대로
+      event: "add_to_cart",
+      // 같이 보내는 상품 값 묶음
+      ecommerce: {
+        // 어느 나라 돈인가
+        currency: "KRW",
+        // 금액 - 한 번 누르면 한 개라 그 상품 가격 하나
+        value: p.price,
+        // 담은 상품 상자 하나를 목록에 넣는다
+        items: [{ item_id: p.id, item_name: p.name, price: p.price, quantity: 1 }]
+      }
+    });
 
   },
   remove(id) {
