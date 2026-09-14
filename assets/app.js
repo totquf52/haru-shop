@@ -138,13 +138,15 @@ function paintCheckout() {
   const form = document.querySelector("#pay-form");
   if (!form) return;
 
+  // ▼ 여기에 「결제를 시작했다」를 알리는 코드가 들어갑니다 (뒤 수업에서)
+
   const sum = document.querySelector("#pay-total");
   if (sum) sum.textContent = won(Cart.total());
 
   form.addEventListener("submit", e => {
     e.preventDefault();
 
-    // ▼ 여기에 「결제를 시작했다」를 알리는 코드가 들어갑니다 (뒤 수업에서)
+    // ▼ 여기에 「결제를 마쳤다」를 알리는 코드가 들어갑니다 (뒤 수업에서)
 
     Cart.clear();
     location.href = "done.html";
