@@ -213,6 +213,33 @@ function paintCheckout() {
     e.preventDefault();
 
     // ▼ 여기에 「결제를 마쳤다」를 알리는 코드가 들어갑니다 (뒤 수업에서)
+    // ▼ 「결제를 마쳤다」(purchase) - 「결제하기」를 눌러 주문 완료로 넘어가는 순간
+    // 장바구니를 비우는 줄보다 앞이라 주문한 상품 값을 아직 읽을 수 있다
+    // 주문 번호 - 누른 순간의 시각(1000분의 1초)과 무작위 글자를 이어 붙인다
+    const transactionId = "HARU-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
+    // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
+    window.dataLayer = window.dataLayer || [];
+    // 앞에서 넣은 상품 값이 섞이지 않게 먼저 비운다
+    dataLayer.push({ ecommerce: null });
+    // 통로 끝에 한 덩어리를 넣는다 - 넣는 순간이 태그 관리자가 듣는 순간
+    dataLayer.push({
+      // 무슨 일이 일어났나 - 계획서 이름 글자 그대로
+      event: "purchase",
+      // 같이 보내는 상품 값 묶음
+      ecommerce: {
+        // 주문 번호
+        transaction_id: transactionId,
+        // 어느 나라 돈인가
+        currency: "KRW",
+        // 금액 - 주문한 상품 합계 (상품 가격 × 수량의 합, 배송비 없음)
+        value: Cart.total(),
+        // 주문한 상품마다 상자 하나씩 목록에 넣는다 (장바구니 화면처럼 없는 상품은 뺀다)
+        items: Cart.read().filter(i => findProduct(i.id)).map(i => {
+          const p = findProduct(i.id);
+          return { item_id: p.id, item_name: p.name, price: p.price, quantity: i.qty };
+        })
+      }
+    });
 
     Cart.clear();
     location.href = "done.html";
