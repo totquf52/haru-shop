@@ -50,6 +50,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="btn" type="button" id="btn-login">로그인</button>
       <button class="btn ghost" type="button" id="btn-logout">로그아웃</button>
     </div>
+    <p style="margin:12px 0 0;font-size:13px"><a href="#" id="forgot-link">비밀번호를 잊으셨나요?</a></p>
+    <!-- 위 링크를 누르면 열린다 -->
+    <div id="forgot-box" hidden style="margin:12px 0 0">
+      <label for="forgot-email">가입할 때 쓴 이메일</label>
+      <input id="forgot-email" type="email" autocomplete="email" placeholder="name@example.com">
+      <button class="btn ghost" type="button" id="btn-forgot">재설정 메일 보내기</button>
+    </div>
     <p style="margin:12px 0 0;font-size:12.5px;color:var(--sub)">도서관이나 학교처럼 같이 쓰는 컴퓨터에서는, 하루살림을 다 보신 뒤 로그아웃을 눌러 주세요.</p>
     <p id="auth-result" role="status" aria-live="polite" style="margin:18px 0 0;min-height:1.5em"></p>
   </form>
@@ -65,6 +72,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     sendEmailVerification,
+    sendPasswordResetEmail,
     signOut
   } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
@@ -141,6 +149,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   document.querySelector("#btn-logout").addEventListener("click", () =>
     run("로그아웃되었습니다.", () => signOut(auth)));
+
+  /* --- 비밀번호 재설정 --- */
+  const forgotBox = document.querySelector("#forgot-box");
+  const forgotEmail = document.querySelector("#forgot-email");
+
+  // 링크를 누르면 이메일 칸을 연다 (위 칸에 적어 둔 이메일이 있으면 옮겨 적는다)
+  document.querySelector("#forgot-link").addEventListener("click", e => {
+    e.preventDefault();
+    forgotBox.hidden = false;
+    if (!forgotEmail.value) forgotEmail.value = emailBox.value.trim();
+    forgotEmail.focus();
+  });
+
+  // 재설정 메일을 보낸다 - 메일 언어는 위에서 정한 한국어(auth.languageCode)
+  document.querySelector("#btn-forgot").addEventListener("click", () => {
+    const address = forgotEmail.value.trim();
+    if (!address) { result.textContent = "이메일을 입력해 주세요."; return; }
+    run("메일을 보냈습니다. 가입된 주소라면 곧 도착합니다.", async () => {
+      try {
+        await sendPasswordResetEmail(auth, address);
+      } catch (err) {
+        // 가입되지 않은 주소여도 같은 한 줄을 보여 준다 - 가입 여부를 알려 주지 않는다
+        if (err.code !== "auth/user-not-found") throw err;
+      }
+    });
+  });
 </script>
 </body>
 </html>
