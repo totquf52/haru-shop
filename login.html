@@ -59,6 +59,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <p style="margin:12px 0 0;font-size:12.5px;color:var(--sub)">도서관이나 학교처럼 같이 쓰는 컴퓨터에서는, 하루살림을 다 보신 뒤 로그아웃을 눌러 주세요.</p>
     <p id="auth-result" role="status" aria-live="polite" style="margin:18px 0 0;min-height:1.5em"></p>
+    <!-- 오류 문구 아래에 붙는 「다음에 할 일」 (링크나 단추) -->
+    <p id="auth-next" hidden style="margin:10px 0 0;font-size:13px"></p>
   </form>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
@@ -95,17 +97,50 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   const passwordBox = document.querySelector("#password");
   const result = document.querySelector("#auth-result");
 
-  // 성공하면 한 줄, 실패하면 오류 코드(auth/...)를 그대로 보여 준다.
+  const nextStep = document.querySelector("#auth-next");
+
+  // 실패했을 때 손님에게 보일 문구 - 오류 코드와 영어 문장은 화면에 내보내지 않는다
+  const ERROR_TEXT = {
+    "auth/invalid-credential": "이메일 또는 비밀번호가 맞지 않아요. 다시 한번 확인해 주세요.",
+    "auth/email-already-in-use": "이미 하루살림에 가입하신 이메일이에요. 로그인 화면에서 들어와 주세요.",
+    "auth/weak-password": "비밀번호는 6자 이상으로 정해 주세요.",
+    "auth/invalid-email": "이메일 주소에 @ 와 그 뒤 주소가 들어갔는지 봐 주세요."
+  };
+  // 위 표에 없는 코드일 때
+  const ERROR_FALLBACK = "문제가 생겼어요. 조금 뒤에 다시 시도해 주세요.";
+
+  // 문구 아래에 붙는 링크·단추를 오류 코드에 맞게 그린다 (해당 없으면 비운다)
+  function paintNext(code) {
+    nextStep.textContent = "";
+    if (code === "auth/invalid-credential") {
+      const a = document.createElement("a");
+      a.href = "#";
+      a.textContent = "비밀번호 다시 정하기";
+      a.addEventListener("click", e => { e.preventDefault(); openForgot(); });
+      nextStep.appendChild(a);
+    } else if (code === "auth/email-already-in-use") {
+      const a = document.createElement("a");
+      a.className = "btn ghost";
+      a.href = "login.html" + location.search;
+      a.textContent = "로그인 화면으로";
+      nextStep.appendChild(a);
+    }
+    nextStep.hidden = !nextStep.hasChildNodes();
+  }
+
+  // 성공하면 한 줄, 실패하면 위 표의 문구를 보여 준다.
   // 이메일·비밀번호는 dataLayer 에도 콘솔에도 넣지 않는다.
   async function run(doneText, action, after) {
     result.textContent = "처리 중…";
+    paintNext(null);
     try {
       // action 이 글자를 돌려주면 그 글자를, 아니면 doneText 를 보여 준다
       const text = await action();
       result.textContent = text || doneText;
       if (after) after();
     } catch (err) {
-      result.textContent = err.code || "알 수 없는 오류";
+      result.textContent = ERROR_TEXT[err.code] || ERROR_FALLBACK;
+      paintNext(err.code);
     }
   }
 
@@ -139,7 +174,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         await sendEmailVerification(cred.user);
         return "인증 메일을 보냈습니다. 메일함과 스팸함을 확인해 주세요.";
       } catch (err) {
-        return "가입되었습니다. 인증 메일은 보내지 못했습니다: " + (err.code || "알 수 없는 오류");
+        return "가입되었습니다. 인증 메일은 보내지 못했습니다.";
       }
     }));
 
@@ -155,17 +190,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   const forgotEmail = document.querySelector("#forgot-email");
 
   // 링크를 누르면 이메일 칸을 연다 (위 칸에 적어 둔 이메일이 있으면 옮겨 적는다)
-  document.querySelector("#forgot-link").addEventListener("click", e => {
-    e.preventDefault();
+  function openForgot() {
     forgotBox.hidden = false;
     if (!forgotEmail.value) forgotEmail.value = emailBox.value.trim();
     forgotEmail.focus();
+  }
+  document.querySelector("#forgot-link").addEventListener("click", e => {
+    e.preventDefault();
+    openForgot();
   });
 
   // 재설정 메일을 보낸다 - 메일 언어는 위에서 정한 한국어(auth.languageCode)
   document.querySelector("#btn-forgot").addEventListener("click", () => {
     const address = forgotEmail.value.trim();
-    if (!address) { result.textContent = "이메일을 입력해 주세요."; return; }
+    if (!address) { result.textContent = "이메일을 입력해 주세요."; paintNext(null); return; }
     run("메일을 보냈습니다. 가입된 주소라면 곧 도착합니다.", async () => {
       try {
         await sendPasswordResetEmail(auth, address);

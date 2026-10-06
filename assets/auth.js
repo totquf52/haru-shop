@@ -89,7 +89,7 @@ function paintVerify(user) {
       } catch (err) {
         if (note) note.textContent = err.code === "auth/too-many-requests"
           ? "잠시 뒤에 다시 눌러 주세요."
-          : (err.code || "알 수 없는 오류");
+          : "문제가 생겼어요. 조금 뒤에 다시 시도해 주세요.";
       }
       btn.disabled = false;
     };
