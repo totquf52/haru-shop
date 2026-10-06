@@ -64,6 +64,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     getAuth,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
+    sendEmailVerification,
     signOut
   } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
@@ -79,6 +80,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  // 인증 메일을 한국어로 보낸다
+  auth.languageCode = "ko";
 
   const emailBox = document.querySelector("#email");
   const passwordBox = document.querySelector("#password");
@@ -89,8 +92,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   async function run(doneText, action, after) {
     result.textContent = "처리 중…";
     try {
-      await action();
-      result.textContent = doneText;
+      // action 이 글자를 돌려주면 그 글자를, 아니면 doneText 를 보여 준다
+      const text = await action();
+      result.textContent = text || doneText;
       if (after) after();
     } catch (err) {
       result.textContent = err.code || "알 수 없는 오류";
@@ -108,7 +112,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   document.querySelector("#btn-signup").addEventListener("click", () =>
     run("가입되었습니다.", async () => {
-      await createUserWithEmailAndPassword(auth, emailBox.value.trim(), passwordBox.value);
+      const cred = await createUserWithEmailAndPassword(auth, emailBox.value.trim(), passwordBox.value);
 
       // ▼ 「가입했다」(sign_up) - 가입이 성공한 순간 (실패하면 위 줄에서 멈춰 여기까지 오지 않는다)
       // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
@@ -120,7 +124,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         // 가입 방법 - 이메일 (이메일 주소와 비밀번호는 넣지 않는다)
         method: "email"
       });
-    }, goNext));
+
+      // 가입한 주소로 인증 메일을 바로 보낸다.
+      // 메일을 못 보내도 가입은 이미 된 것이라, 가입 실패처럼 보이지 않게 따로 알린다.
+      try {
+        await sendEmailVerification(cred.user);
+        return "인증 메일을 보냈습니다. 메일함과 스팸함을 확인해 주세요.";
+      } catch (err) {
+        return "가입되었습니다. 인증 메일은 보내지 못했습니다: " + (err.code || "알 수 없는 오류");
+      }
+    }));
 
   document.querySelector("#btn-login").addEventListener("click", () =>
     run("로그인되었습니다.", () =>

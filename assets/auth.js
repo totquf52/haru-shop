@@ -3,7 +3,7 @@
    모든 화면이 <script type="module" src="assets/auth.js"> 로 불러 쓴다.
    이메일은 화면에만 적고 dataLayer 에도 콘솔에도 넣지 않는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, reload, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -18,6 +18,8 @@ const firebaseConfig = {
 // 화면이 이미 연결해 두었으면 그것을 쓰고, 없을 때만 새로 연결한다
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
+// 인증 메일을 한국어로 보낸다
+auth.languageCode = "ko";
 
 // 로그아웃하는 중에는 「로그인 화면으로 돌려보내기」가 끼어들지 않게 한다
 let leaving = false;
@@ -72,8 +74,30 @@ function paintHeader(user) {
   box.append(email, mypage, out);
 }
 
+/* --- 메일 인증 안내 ([data-auth-unverified]) ---
+   인증 안 된 계정에만 안내와 「인증 메일 다시 보내기」 단추를 보여 준다. */
+function paintVerify(user) {
+  document.querySelectorAll("[data-auth-unverified]").forEach(el => { el.hidden = user.emailVerified; });
+
+  const note = document.querySelector("[data-auth-resend-result]");
+  document.querySelectorAll("[data-auth-resend]").forEach(btn => {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      try {
+        await sendEmailVerification(user);
+        if (note) note.textContent = "인증 메일을 보냈습니다. 메일함과 스팸함을 확인해 주세요.";
+      } catch (err) {
+        if (note) note.textContent = err.code === "auth/too-many-requests"
+          ? "잠시 뒤에 다시 눌러 주세요."
+          : (err.code || "알 수 없는 오류");
+      }
+      btn.disabled = false;
+    };
+  });
+}
+
 /* --- 로그인해야 보이는 화면 (<body data-require-login>) --- */
-function guardPage(user) {
+async function guardPage(user) {
   if (!document.body.hasAttribute("data-require-login")) return;
 
   if (!user) {
@@ -83,6 +107,11 @@ function guardPage(user) {
     location.replace("login.html?next=" + encodeURIComponent(here));
     return;
   }
+
+  // 화면을 열 때마다 메일 인증 여부를 서버에서 새로 받아 온다
+  // (받아 오지 못하면 브라우저가 기억하는 값으로 본다)
+  try { await reload(user); } catch (err) {}
+  paintVerify(user);
 
   // 확인이 끝난 뒤에야 내용을 채우고 보여 준다
   document.querySelectorAll("[data-auth-email]").forEach(el => { el.textContent = user.email; });

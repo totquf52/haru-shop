@@ -42,6 +42,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <h2>마이페이지</h2>
   <p class="lead">로그인한 계정입니다.</p>
   <p data-auth-email data-clarity-mask="true" style="font-weight:700;margin:0 0 24px"></p>
+  <!-- 메일 인증이 안 된 계정에만 보인다 (assets/auth.js 가 연다) -->
+  <div data-auth-unverified hidden style="margin:0 0 24px">
+    <p style="margin:0 0 12px">아직 이메일 인증이 되지 않았습니다. 받은 메일의 링크를 눌러 주세요.</p>
+    <button class="btn" type="button" data-auth-resend>인증 메일 다시 보내기</button>
+    <p data-auth-resend-result role="status" aria-live="polite" style="margin:12px 0 0;font-size:13px;color:var(--sub)"></p>
+  </div>
   <button class="btn ghost" type="button" data-auth-logout>로그아웃</button>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
