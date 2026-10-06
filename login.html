@@ -97,8 +97,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.querySelector("#login-form").addEventListener("submit", e => e.preventDefault());
 
   document.querySelector("#btn-signup").addEventListener("click", () =>
-    run("가입되었습니다.", () =>
-      createUserWithEmailAndPassword(auth, emailBox.value.trim(), passwordBox.value)));
+    run("가입되었습니다.", async () => {
+      await createUserWithEmailAndPassword(auth, emailBox.value.trim(), passwordBox.value);
+
+      // ▼ 「가입했다」(sign_up) - 가입이 성공한 순간 (실패하면 위 줄에서 멈춰 여기까지 오지 않는다)
+      // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
+      window.dataLayer = window.dataLayer || [];
+      // 통로 끝에 한 덩어리를 넣는다 - 넣는 순간이 태그 관리자가 듣는 순간
+      dataLayer.push({
+        // 무슨 일이 일어났나 - 계획서 이름 글자 그대로
+        event: "sign_up",
+        // 가입 방법 - 이메일 (이메일 주소와 비밀번호는 넣지 않는다)
+        method: "email"
+      });
+    }));
 
   document.querySelector("#btn-login").addEventListener("click", () =>
     run("로그인되었습니다.", () =>
