@@ -189,18 +189,34 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   // Google 계정으로 들어온다 - 팝업 방식. 들어오면 구글 계정의 이름을 보여 준다.
   // 이름과 이메일은 화면에만 적고 dataLayer 에도 콘솔에도 넣지 않는다.
-  document.querySelector("#btn-google").addEventListener("click", () =>
+  document.querySelector("#btn-google").addEventListener("click", () => {
+    // 구글 계정의 프로필 사진 주소 (없는 계정이면 빈 채로 둔다)
+    let photo = "";
     run("Google 계정으로 들어왔습니다.", async () => {
       try {
         const cred = await signInWithPopup(auth, new GoogleAuthProvider());
         const name = cred.user.displayName;
+        photo = cred.user.photoURL || "";
         return name ? name + "님, Google 계정으로 들어왔습니다." : "";
       } catch (err) {
         // 손님이 팝업을 그냥 닫은 것은 오류로 알리지 않는다
         if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") return " ";
         throw err;
       }
-    }));
+    }, () => {
+      // 사진이 있으면 이름 앞에 작고 동그랗게 붙인다 - 없거나 못 불러오면 이름만 남는다
+      if (!photo) return;
+      const img = document.createElement("img");
+      img.src = photo;
+      img.alt = "";
+      img.width = 24;
+      img.height = 24;
+      img.referrerPolicy = "no-referrer";
+      img.style.cssText = "border-radius:50%;vertical-align:middle;margin-right:8px;object-fit:cover";
+      img.addEventListener("error", () => img.remove());
+      result.prepend(img);
+    });
+  });
 
   document.querySelector("#btn-logout").addEventListener("click", () =>
     run("로그아웃되었습니다.", () => signOut(auth)));
