@@ -50,6 +50,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="btn" type="button" id="btn-login">로그인</button>
       <button class="btn ghost" type="button" id="btn-logout">로그아웃</button>
     </div>
+    <div style="margin:12px 0 0">
+      <button class="btn ghost" type="button" id="btn-google">Google로 계속하기</button>
+    </div>
     <p style="margin:12px 0 0;font-size:13px"><a href="#" id="forgot-link">비밀번호를 잊으셨나요?</a></p>
     <!-- 위 링크를 누르면 열린다 -->
     <div id="forgot-box" hidden style="margin:12px 0 0">
@@ -75,6 +78,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     signInWithEmailAndPassword,
     sendEmailVerification,
     sendPasswordResetEmail,
+    GoogleAuthProvider,
+    signInWithPopup,
     signOut
   } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
@@ -181,6 +186,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.querySelector("#btn-login").addEventListener("click", () =>
     run("로그인되었습니다.", () =>
       signInWithEmailAndPassword(auth, emailBox.value.trim(), passwordBox.value), goNext));
+
+  // Google 계정으로 들어온다 - 팝업 방식. 들어오면 구글 계정의 이름을 보여 준다.
+  // 이름과 이메일은 화면에만 적고 dataLayer 에도 콘솔에도 넣지 않는다.
+  document.querySelector("#btn-google").addEventListener("click", () =>
+    run("Google 계정으로 들어왔습니다.", async () => {
+      try {
+        const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+        const name = cred.user.displayName;
+        return name ? name + "님, Google 계정으로 들어왔습니다." : "";
+      } catch (err) {
+        // 손님이 팝업을 그냥 닫은 것은 오류로 알리지 않는다
+        if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") return " ";
+        throw err;
+      }
+    }));
 
   document.querySelector("#btn-logout").addEventListener("click", () =>
     run("로그아웃되었습니다.", () => signOut(auth)));
