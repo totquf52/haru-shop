@@ -48,6 +48,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <button class="btn" type="button" data-auth-resend>인증 메일 다시 보내기</button>
     <p data-auth-resend-result role="status" aria-live="polite" style="margin:12px 0 0;font-size:13px;color:var(--sub)"></p>
   </div>
+  <!-- 구글 계정 연결 - 이미 붙어 있으면 단추 대신 「연결됨」 (assets/auth.js 가 고른다) -->
+  <div style="margin:0 0 24px">
+    <p style="margin:0 0 8px;font-size:13px;color:var(--sub)">구글 계정</p>
+    <button class="btn" type="button" data-auth-link-google hidden>구글 계정 연결하기</button>
+    <span data-auth-linked-google hidden>연결됨</span>
+    <p data-auth-link-result role="status" aria-live="polite" style="margin:12px 0 0;font-size:13px;color:var(--sub)"></p>
+  </div>
   <button class="btn ghost" type="button" data-auth-logout>로그아웃</button>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>

@@ -3,7 +3,7 @@
    모든 화면이 <script type="module" src="assets/auth.js"> 로 불러 쓴다.
    이메일은 화면에만 적고 dataLayer 에도 콘솔에도 넣지 않는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, reload, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, reload, sendEmailVerification, GoogleAuthProvider, linkWithPopup } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -110,6 +110,35 @@ function paintVerify(user) {
   });
 }
 
+/* --- 구글 계정 연결 ([data-auth-link-google]) ---
+   지금 로그인한 계정에 구글 로그인을 하나 더 붙인다. 새 계정을 만들지 않는다.
+   이미 붙어 있으면 단추 대신 「연결됨」을 보여 준다. */
+function paintLink(user) {
+  const btn = document.querySelector("[data-auth-link-google]");
+  const done = document.querySelector("[data-auth-linked-google]");
+  const note = document.querySelector("[data-auth-link-result]");
+  if (!btn || !done) return;
+
+  // 이 계정에 구글 로그인이 이미 붙어 있는가
+  const linked = user.providerData.some(p => p.providerId === "google.com");
+  btn.hidden = linked;
+  done.hidden = !linked;
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    if (note) note.textContent = "";
+    try {
+      const cred = await linkWithPopup(user, new GoogleAuthProvider());
+      paintLink(cred.user);
+      if (note) note.textContent = "구글 계정을 연결했어요.";
+    } catch (err) {
+      // 실패하면 오류 코드(auth/...)를 그대로 보여 준다
+      if (note) note.textContent = err.code || "알 수 없는 오류";
+    }
+    btn.disabled = false;
+  };
+}
+
 /* --- 로그인해야 보이는 화면 (<body data-require-login>) --- */
 async function guardPage(user) {
   if (!document.body.hasAttribute("data-require-login")) return;
@@ -126,6 +155,7 @@ async function guardPage(user) {
   // (받아 오지 못하면 브라우저가 기억하는 값으로 본다)
   try { await reload(user); } catch (err) {}
   paintVerify(user);
+  paintLink(user);
 
   // 확인이 끝난 뒤에야 내용을 채우고 보여 준다
   document.querySelectorAll("[data-auth-email]").forEach(el => { el.textContent = user.email; });
