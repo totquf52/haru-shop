@@ -61,6 +61,20 @@ function paintHeader(user) {
   email.setAttribute("data-clarity-mask", "true");
   email.textContent = user.email;
 
+  // 구글로 들어온 사람은 이메일 앞에 프로필 사진을 작고 동그랗게 붙인다
+  // 사진이 없거나 못 불러오면 이메일만 남는다
+  if (user.photoURL) {
+    const img = document.createElement("img");
+    img.src = user.photoURL;
+    img.alt = "";
+    img.width = 22;
+    img.height = 22;
+    img.referrerPolicy = "no-referrer";
+    img.style.cssText = "border-radius:50%;vertical-align:middle;margin-right:6px;object-fit:cover";
+    img.addEventListener("error", () => img.remove());
+    email.prepend(img);
+  }
+
   const mypage = document.createElement("a");
   mypage.href = "mypage.html";
   mypage.textContent = "마이페이지";
