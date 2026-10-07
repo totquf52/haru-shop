@@ -59,8 +59,7 @@ function paintHeader(user) {
   const email = document.createElement("span");
   email.className = "auth-email";
   email.setAttribute("data-clarity-mask", "true");
-  // 구글로 들어온 계정처럼 이름이 있으면 이름을, 없으면 이메일을 적는다
-  email.textContent = user.displayName ? user.displayName + " 님" : user.email;
+  email.textContent = user.email;
 
   const mypage = document.createElement("a");
   mypage.href = "mypage.html";
