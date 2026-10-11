@@ -3,7 +3,7 @@
    긴 설명(detail)과 그림(emoji)은 지금처럼 shop.js 에서 읽는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -28,28 +28,17 @@ const readLine = n => "이번 화면에서 읽은 문서 " + n + "장";
 const emojiOf = id => { const p = findProduct(id); return p ? p.emoji : ""; };
 
 /* --- 상품 목록 --- */
-async function paintListFromFirestore() {
-  const box = document.querySelector("#product-list");
-  if (!box) return;
+// 한 번에 가져오는 개수
+const PAGE_SIZE = 3;
+// 마지막으로 받은 문서 - 「더 보기」가 이 문서 다음부터 가져온다
+let lastVisibleDoc = null;
+// 이 화면에서 지금까지 읽은 문서 수
+let readTotal = 0;
 
-  const count = document.createElement("p");
-  count.id = "read-count";
-  count.className = "lead";
-  count.style.margin = "28px 0 0";
-  box.after(count);
-
-  try {
-    // 숨기지 않은 상품만 · 가격이 싼 것부터 · 한 번에 셋만 받아 온다
-    const q = query(
-      collection(db, "products"),
-      where("isVisible", "==", true),
-      orderBy("price"),
-      limit(3)
-    );
-    const snapshot = await getDocs(q);
-    box.innerHTML = snapshot.docs.map(d => {
-      const p = d.data();
-      return `
+// 문서 한 장을 카드 한 장으로
+function cardOf(d) {
+  const p = d.data();
+  return `
     <a class="card" href="product.html?id=${d.id}">
       <div class="thumb">${emojiOf(d.id)}</div>
       <h3>${p.name}</h3>
@@ -57,8 +46,60 @@ async function paintListFromFirestore() {
       <div class="price">${won(p.price)}</div>
       <div class="stock" style="color:var(--sub);font-size:13.5px;margin-top:4px">${stockLine(p.stock)}</div>
     </a>`;
-    }).join("");
-    count.textContent = readLine(snapshot.size);
+}
+
+async function paintListFromFirestore() {
+  const box = document.querySelector("#product-list");
+  if (!box) return;
+
+  const more = document.createElement("button");
+  more.type = "button";
+  more.id = "load-more";
+  more.className = "btn ghost";
+  more.textContent = "더 보기";
+  more.hidden = true;
+  more.style.margin = "24px 0 0";
+
+  const count = document.createElement("p");
+  count.id = "read-count";
+  count.className = "lead";
+  count.style.margin = "28px 0 0";
+  box.after(more, count);
+
+  // 한 쪽을 받아 목록 아래에 이어 붙인다
+  async function loadPage() {
+    // 숨기지 않은 상품만 · 가격이 싼 것부터 · 한 번에 셋만 받아 온다
+    const parts = [
+      collection(db, "products"),
+      where("isVisible", "==", true),
+      orderBy("price")
+    ];
+    // 앞에서 받은 것이 있으면 마지막 문서 다음부터 받는다
+    if (lastVisibleDoc) parts.push(startAfter(lastVisibleDoc));
+    parts.push(limit(PAGE_SIZE));
+
+    const snapshot = await getDocs(query(...parts));
+    box.insertAdjacentHTML("beforeend", snapshot.docs.map(cardOf).join(""));
+
+    if (snapshot.docs.length > 0) lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
+    readTotal += snapshot.size;
+    count.textContent = readLine(readTotal);
+    // 가져온 개수가 한 쪽보다 적으면 더 가져올 것이 없다
+    more.hidden = snapshot.docs.length < PAGE_SIZE;
+  }
+
+  more.addEventListener("click", async () => {
+    more.disabled = true;
+    try {
+      await loadPage();
+    } catch (err) {
+      console.error(err);
+    }
+    more.disabled = false;
+  });
+
+  try {
+    await loadPage();
   } catch (err) {
     // 오류 글은 줄이지 않고 브라우저 콘솔에 그대로 찍는다
     console.error(err);
