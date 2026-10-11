@@ -57,7 +57,8 @@ async function paintListFromFirestore() {
   more.id = "load-more";
   more.className = "btn ghost";
   more.textContent = "더 보기";
-  more.hidden = true;
+  // .btn 이 display 를 정해 두어서 hidden 속성만으로는 안 숨겨진다 - display 로 숨긴다
+  more.style.display = "none";
   more.style.margin = "24px 0 0";
 
   const count = document.createElement("p");
@@ -85,7 +86,7 @@ async function paintListFromFirestore() {
     readTotal += snapshot.size;
     count.textContent = readLine(readTotal);
     // 가져온 개수가 한 쪽보다 적으면 더 가져올 것이 없다
-    more.hidden = snapshot.docs.length < PAGE_SIZE;
+    more.style.display = snapshot.docs.length < PAGE_SIZE ? "none" : "";
   }
 
   more.addEventListener("click", async () => {
