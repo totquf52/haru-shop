@@ -139,6 +139,11 @@ function paintLink(user) {
   };
 }
 
+/* --- 로그인한 사람에게만 보이는 것 ([data-auth-only]) --- */
+function paintMemberOnly(user) {
+  document.querySelectorAll("[data-auth-only]").forEach(el => { el.hidden = !user; });
+}
+
 /* --- 로그인해야 보이는 화면 (<body data-require-login>) --- */
 async function guardPage(user) {
   if (!document.body.hasAttribute("data-require-login")) return;
@@ -165,5 +170,6 @@ async function guardPage(user) {
 
 onAuthStateChanged(auth, user => {
   paintHeader(user);
+  paintMemberOnly(user);
   guardPage(user);
 });

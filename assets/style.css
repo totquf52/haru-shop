@@ -37,11 +37,15 @@ h2{font-size:22px;margin:0 0 18px;letter-spacing:-.01em}
 .card h3{margin:0 0 6px;font-size:16px}
 .card .sum{color:var(--sub);font-size:13.5px;margin:0 0 12px;min-height:40px}
 .card .price{font-weight:700}
+.card .stock{color:var(--sub);font-size:13px;margin-top:4px}
+.grid .empty{grid-column:1/-1}
 
 .detail{display:grid;grid-template-columns:200px 1fr;gap:36px;align-items:start}
 .detail .thumb{font-size:110px;text-align:center;background:var(--card);
   border:1px solid var(--line);border-radius:12px;padding:34px 0}
 .detail h1{margin:0 0 8px;font-size:26px}
+.detail .sum{color:var(--sub);margin:0 0 6px}
+.detail .stock{color:var(--sub);font-size:13.5px;margin:0 0 12px}
 .detail .price{font-size:20px;font-weight:700;margin:0 0 22px}
 .detail .body p{margin:0 0 14px}
 

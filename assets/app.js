@@ -6,6 +6,10 @@
 const won = n => n.toLocaleString("ko-KR") + "원";
 const findProduct = id => PRODUCTS.find(p => p.id === id);
 const qs = key => new URLSearchParams(location.search).get(key);
+// Firestore 에서 읽어 온 글자를 화면에 넣기 전에 태그로 읽히지 않게 바꾼다
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
+// 재고 한 줄 - 0이면 「품절」
+const stockText = n => n > 0 ? "재고 " + n + "개" : "품절";
 
 /* --- 장바구니는 브라우저에 저장합니다 --- */
 const Cart = {
@@ -79,36 +83,48 @@ function paintChrome() {
   if (foot) foot.textContent = SHOP.name + " · " + SHOP.tagline;
 }
 
-/* --- 상품 목록 --- */
-function paintList() {
+/* --- 첫 화면 머리 --- */
+function paintHero() {
+  const title = document.querySelector("#hero-title");
+  if (!title) return;
+
+  title.textContent = SHOP.name;
+  document.querySelector("#hero-tagline").textContent = SHOP.tagline;
+}
+
+/* --- 상품 목록 ---
+   items 는 assets/products.js 가 Firestore 에서 읽어 와 넘겨준다
+   (이름 · 가격 · 한 줄 소개 · 재고는 Firestore, 그림은 shop.js) */
+function paintList(items) {
   const box = document.querySelector("#product-list");
   if (!box) return;
 
-  document.querySelector("#hero-title").textContent = SHOP.name;
-  document.querySelector("#hero-tagline").textContent = SHOP.tagline;
-
-  box.innerHTML = PRODUCTS.map(p => `
-    <a class="card" href="product.html?id=${p.id}">
+  box.innerHTML = items.map(p => `
+    <a class="card" href="product.html?id=${encodeURIComponent(p.id)}">
       <div class="thumb">${p.emoji}</div>
-      <h3>${p.name}</h3>
-      <p class="sum">${p.summary}</p>
+      <h3>${esc(p.name)}</h3>
+      <p class="sum">${esc(p.summary)}</p>
       <div class="price">${won(p.price)}</div>
+      <div class="stock">${stockText(p.stock)}</div>
     </a>`).join("");
 }
 
-/* --- 상품 상세 --- */
-function paintDetail() {
+/* --- 상품 상세 ---
+   p 는 assets/products.js 가 Firestore 에서 읽어 와 넘겨준다. 문서가 없으면 null
+   (이름 · 가격 · 한 줄 소개 · 재고는 Firestore, 그림과 긴 설명은 shop.js) */
+function paintDetail(p) {
   const box = document.querySelector("#product-detail");
   if (!box) return;
 
-  const p = findProduct(qs("id"));
   if (!p) { box.innerHTML = '<p class="empty">그런 상품이 없습니다.</p>'; return; }
 
   document.title = p.name + " — " + SHOP.name;
   box.innerHTML = `
     <div class="thumb">${p.emoji}</div>
     <div>
-      <h1>${p.name}</h1>
+      <h1>${esc(p.name)}</h1>
+      <p class="sum">${esc(p.summary)}</p>
+      <p class="stock">${stockText(p.stock)}</p>
       <div class="price">${won(p.price)}</div>
       <div class="body prose">${p.detail.map(t => `<p>${t}</p>`).join("")}</div>
       <button class="btn" id="add-to-cart">장바구니에 담기</button>
@@ -257,8 +273,8 @@ function paintProse() {
 
 document.addEventListener("DOMContentLoaded", () => {
   paintChrome();
-  paintList();
-  paintDetail();
+  paintHero();
+  // 상품 목록과 상품 상세는 assets/products.js 가 Firestore 에서 읽은 뒤에 그린다
   paintCart();
   paintCheckout();
   paintProse();
