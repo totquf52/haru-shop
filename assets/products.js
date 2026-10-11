@@ -43,7 +43,7 @@ async function paintListFromFirestore() {
     const q = query(
       collection(db, "products"),
       where("isVisible", "==", true),
-      orderBy("price", "desc"),
+      orderBy("price"),
       limit(3)
     );
     const snapshot = await getDocs(q);
