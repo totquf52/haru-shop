@@ -3,7 +3,7 @@
    긴 설명(detail)과 그림(emoji)은 지금처럼 shop.js 에서 읽는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -39,8 +39,14 @@ async function paintListFromFirestore() {
   box.after(count);
 
   try {
-    // products 의 문서를 여러 장 읽어 온다
-    const snapshot = await getDocs(collection(db, "products"));
+    // 숨기지 않은 상품만 · 가격이 싼 것부터 · 한 번에 셋만 받아 온다
+    const q = query(
+      collection(db, "products"),
+      where("isVisible", "==", true),
+      orderBy("price"),
+      limit(3)
+    );
+    const snapshot = await getDocs(q);
     box.innerHTML = snapshot.docs.map(d => {
       const p = d.data();
       return `
@@ -54,8 +60,9 @@ async function paintListFromFirestore() {
     }).join("");
     count.textContent = readLine(snapshot.size);
   } catch (err) {
+    // 오류 글은 줄이지 않고 브라우저 콘솔에 그대로 찍는다
     console.error(err);
-    box.innerHTML = '<p class="empty">' + String(err) + "</p>";
+    box.innerHTML = '<p class="empty">목록을 불러오지 못했습니다</p>';
   }
 }
 
