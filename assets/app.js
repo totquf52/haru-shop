@@ -87,7 +87,13 @@ function paintList() {
   document.querySelector("#hero-title").textContent = SHOP.name;
   document.querySelector("#hero-tagline").textContent = SHOP.tagline;
 
-  // 상품 카드는 assets/products.js 가 Firestore 의 products 를 읽어 그린다
+  box.innerHTML = PRODUCTS.map(p => `
+    <a class="card" href="product.html?id=${p.id}">
+      <div class="thumb">${p.emoji}</div>
+      <h3>${p.name}</h3>
+      <p class="sum">${p.summary}</p>
+      <div class="price">${won(p.price)}</div>
+    </a>`).join("");
 }
 
 /* --- 상품 상세 --- */
