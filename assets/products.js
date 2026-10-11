@@ -3,7 +3,7 @@
    긴 설명(detail)과 그림(emoji)은 지금처럼 shop.js 에서 읽는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit, startAfter, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -143,12 +143,74 @@ async function paintDetailFromFirestore() {
     count.style.margin = "22px 0 0";
     count.textContent = readLine(1);
     box.querySelector("#add-to-cart").after(count);
+
+    paintOrderButton(box, id, stock);
   } catch (err) {
     console.error(err);
     const note = document.createElement("p");
     note.textContent = String(err);
     box.append(note);
   }
+}
+
+/* --- 「바로 주문」 ---
+   재고 확인 · 재고 차감 · 주문 문서 쓰기를 한 트랜잭션으로 묶는다.
+   장바구니 · 결제 화면과는 따로 움직이고, dataLayer 에는 아무것도 보내지 않는다. */
+function paintOrderButton(box, id, stockEl) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "order-now";
+  btn.className = "btn ghost";
+  btn.textContent = "바로 주문";
+  btn.style.marginLeft = "8px";
+
+  const note = document.createElement("p");
+  note.id = "order-result";
+  note.setAttribute("role", "status");
+  note.style.cssText = "margin:14px 0 0;min-height:1.5em;font-weight:600";
+
+  box.querySelector("#add-to-cart").after(btn, note);
+
+  btn.addEventListener("click", async () => {
+    note.textContent = "";
+
+    const user = auth.currentUser;
+    if (!user) { note.textContent = "로그인이 필요합니다"; return; }
+
+    btn.disabled = true;
+    try {
+      const productRef = doc(db, "products", id);
+      // 읽고 나서 쓰는 일을 한 묶음으로 - 그 사이에 문서가 바뀌면 처음부터 다시 실행된다
+      const left = await runTransaction(db, async tx => {
+        // 1. 재고를 읽는다
+        const snap = await tx.get(productRef);
+        const p = snap.data();
+        // 2. 재고가 모자라면 아무것도 쓰지 않고 그만둔다
+        if (!snap.exists() || !(p.stock >= 1)) return null;
+        // 3. 재고를 1 줄이고, 주문 문서 한 장을 자동 ID로 만든다
+        tx.update(productRef, { stock: p.stock - 1 });
+        tx.set(doc(collection(db, "orders")), {
+          userId: user.uid,
+          items: [{ productId: id, name: p.name, price: p.price, quantity: 1 }],
+          totalPrice: p.price * 1,
+          status: "paid",
+          createdAt: serverTimestamp()
+        });
+        return p.stock - 1;
+      });
+
+      if (left === null) {
+        note.textContent = "재고가 없습니다";
+      } else {
+        note.textContent = "주문했습니다";
+        stockEl.textContent = stockLine(left);
+      }
+    } catch (err) {
+      console.error(err);
+      note.textContent = String(err);
+    }
+    btn.disabled = false;
+  });
 }
 
 /* --- 「상품 올리기」 - 로그인한 사람에게만 보인다 ---
