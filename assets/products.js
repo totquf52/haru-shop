@@ -29,7 +29,7 @@ const emojiOf = id => { const p = findProduct(id); return p ? p.emoji : ""; };
 
 /* --- 상품 목록 --- */
 // 한 번에 가져오는 개수
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 2;
 // 마지막으로 받은 문서 - 「더 보기」가 이 문서 다음부터 가져온다
 let lastVisibleDoc = null;
 // 이 화면에서 지금까지 읽은 문서 수
