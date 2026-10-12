@@ -3,7 +3,7 @@
    로그인한 사람의 UID 와 userId 가 같은 주문만 쿼리로 고른다.
    로그인 상태를 지켜보는 일은 auth.js 가 한다 - 여기서는 확인이 끝나기를 기다렸다가 한 번만 건다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, query, where, onSnapshot, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // index.html 과 같은 Firebase 설정
@@ -82,6 +82,25 @@ function orderRow(order) {
   status.style.cssText = "font-weight:700";
 
   top.append(day, name, total, status);
+
+  // paid 인 주문에만 「주문 취소」 버튼을 붙인다 (저장되는 동안에는 누를 수 없고 「저장 중」으로 보인다)
+  if (savingIds.has(order.id)) {
+    const saving = document.createElement("button");
+    saving.type = "button";
+    saving.className = "btn ghost";
+    saving.disabled = true;
+    saving.textContent = "저장 중";
+    saving.style.cssText = "padding:4px 10px;font-size:13px";
+    top.appendChild(saving);
+  } else if (order.status === "paid") {
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "btn ghost";
+    cancel.textContent = "주문 취소";
+    cancel.style.cssText = "padding:4px 10px;font-size:13px";
+    cancel.addEventListener("click", () => cancelOrder(order.id));
+    top.appendChild(cancel);
+  }
   li.appendChild(top);
 
   // 단계 줄은 네 값일 때만 그린다 (canceled 와 모르는 값은 말만 보여 준다)
@@ -89,8 +108,34 @@ function orderRow(order) {
   return li;
 }
 
+// 지금 저장하고 있는 주문의 문서 ID 와, 마지막으로 그린 주문 한 벌
+const savingIds = new Set();
+let lastOrders = [];
+
+// 그 주문 문서의 status 만 canceled 로 고친다 - 다른 필드는 그대로 둔다
+async function cancelOrder(orderId) {
+  if (savingIds.has(orderId)) return;
+  const before = lastOrders.map(order => ({ ...order }));
+  const note = document.querySelector("#my-orders-cancel-failed");
+  if (note) note.hidden = true;
+  savingIds.add(orderId);
+  paintOrders(lastOrders);
+  try {
+    await updateDoc(doc(db, "orders", orderId), { status: "canceled" });
+    savingIds.delete(orderId);
+    paintOrders(lastOrders);
+  } catch (err) {
+    // 저장에 실패하면 누르기 전 화면으로 되돌리고 안내를 보여 준다
+    console.error(err);
+    savingIds.delete(orderId);
+    paintOrders(before);
+    if (note) note.hidden = false;
+  }
+}
+
 // 받은 주문 한 벌로 목록을 다시 그린다 (최신순 정렬은 여기서 한다)
 function paintOrders(orders) {
+  lastOrders = orders;
   const list = document.querySelector("#my-orders");
   const empty = document.querySelector("#my-orders-empty");
   if (!list) return;
@@ -116,7 +161,7 @@ function listenMyOrders(uid) {
   const unsubscribe = onSnapshot(myOrders, (snapshot) => {
     console.log("[주문 알림] 내 주문 " + snapshot.size + "건을 받았습니다");
     const orders = [];
-    snapshot.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
+    snapshot.forEach((d) => orders.push({ id: d.id, ...d.data() }));
     paintOrders(orders);
 
     // 처음 받는 알림은 전부 added 라 띄우지 않는다 - 내용이 바뀐 것(modified)이 있을 때만 한 줄을 띄운다
@@ -164,7 +209,7 @@ function showRecheck(myOrders) {
     btn.disabled = true;
     const snapshot = await getDocs(myOrders);
     const orders = [];
-    snapshot.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
+    snapshot.forEach((d) => orders.push({ id: d.id, ...d.data() }));
     paintOrders(orders);
     btn.disabled = false;
   };

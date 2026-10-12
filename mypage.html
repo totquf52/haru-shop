@@ -62,6 +62,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- 내 주문이 전부 끝나 그만 듣게 되면 보인다 (assets/orders.js 가 연다) -->
     <p id="my-orders-stopped" hidden style="margin:12px 0 0;font-size:13px;color:var(--sub)">모든 주문이 마무리되어 상태 자동 확인을 멈췄습니다. 화면을 새로 고치면 다시 확인합니다.
       <button class="btn ghost" type="button" id="my-orders-recheck" hidden style="margin-left:8px;padding:4px 10px;font-size:13px">다시 확인</button></p>
+    <!-- 「주문 취소」 저장에 실패하면 보인다 (assets/orders.js 가 연다) -->
+    <p id="my-orders-cancel-failed" hidden role="alert" style="margin:12px 0 0;font-size:13px;color:#b3261e">주문을 취소하지 못했어요. 주문은 그대로 「주문 접수」 상태예요. 잠시 뒤 다시 눌러 주세요.</p>
     <p id="my-orders-empty" hidden style="margin:12px 0 0;font-size:13px;color:var(--sub)">아직 주문이 없습니다</p>
   </div>
   <button class="btn ghost" type="button" data-auth-logout>로그아웃</button>
