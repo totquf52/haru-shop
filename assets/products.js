@@ -1,9 +1,11 @@
 /* --- 상품 (Firestore) ---
    상품 목록과 상품 상세의 이름 · 가격 · 한 줄 소개 · 재고를 Firestore 의 products 컬렉션에서 읽어 온다.
    문서 ID 는 shop.js 의 id(p1~p6)와 같다. 긴 설명(detail)과 그림(emoji)은 shop.js 것을 그대로 쓴다.
-   화면을 그리는 일은 app.js 의 paintList · paintDetail 이 한다. */
+   화면을 그리는 일은 app.js 의 paintList · paintDetail 이 한다.
+   상품 상세의 「바로 주문」도 이 파일이 한다 - 재고 확인 · 재고 차감 · 주문 문서 쓰기를 한 트랜잭션으로 묶는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, runTransaction, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -18,6 +20,8 @@ const firebaseConfig = {
 // 화면이 이미 연결해 두었으면 그것을 쓰고, 없을 때만 새로 연결한다
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+// 「바로 주문」을 누른 사람이 누구인지 읽는다 (로그인 상태를 지켜보는 일은 auth.js 가 한다)
+const auth = getAuth(app);
 
 // 「상품 올리기」가 올리는 다섯 장 - 재고와 보이기 값 (이름 · 가격 · 한 줄 소개는 shop.js 에서 읽는다)
 const SEED = [
@@ -125,10 +129,84 @@ async function loadDetail() {
     // 주소의 id 와 같은 문서 한 장만 읽는다
     const snap = await getDoc(doc(db, "products", id));
     paintDetail(snap.exists() ? toProduct(snap) : null);
+    if (snap.exists()) addOrderButton(box, id);
     showReads(snap.exists() ? 1 : 0);
   } catch (err) {
     showError(box, err);
     showReads(0);
+  }
+}
+
+/* --- 바로 주문 ---
+   「장바구니에 담기」 옆에 단추를 하나 붙인다. 장바구니 · 결제 화면을 거치지 않는다.
+   dataLayer 에는 아무것도 보내지 않는다. */
+function addOrderButton(box, id) {
+  const cartBtn = box.querySelector("#add-to-cart");
+  if (!cartBtn) return;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn ghost";
+  btn.id = "order-now";
+  btn.style.marginLeft = "8px";
+  btn.textContent = "바로 주문";
+
+  const note = document.createElement("p");
+  note.id = "order-result";
+  note.style.cssText = "margin:12px 0 0;white-space:pre-wrap;overflow-wrap:anywhere";
+
+  cartBtn.after(btn, note);
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    await orderNow(box, id, note);
+    btn.disabled = false;
+  });
+}
+
+async function orderNow(box, id, note) {
+  note.textContent = "주문하는 중…";
+  try {
+    // 브라우저가 기억하는 로그인을 다 읽은 뒤에 묻는다
+    await auth.authStateReady();
+    const user = auth.currentUser;
+    if (!user) { note.textContent = "로그인이 필요합니다"; return; }
+
+    const productRef = doc(db, "products", id);
+    // 재고 확인 · 재고 차감 · 주문 문서 쓰기 - 둘 다 실행되거나 둘 다 실행되지 않는다
+    // 돌려주는 값은 주문 뒤에 남은 재고. 재고가 모자라면 아무것도 쓰지 않고 null
+    const left = await runTransaction(db, async tx => {
+      const snap = await tx.get(productRef);
+      if (!snap.exists()) throw new Error("상품 문서가 없습니다 (products/" + id + ")");
+
+      const d = snap.data();
+      if (!(typeof d.stock === "number" && d.stock >= 1)) return null;
+      // 주문 문서의 price 는 숫자여야 한다 - 상품 문서 값이 숫자가 아니면 바꿔 적지 않고 멈춘다
+      if (typeof d.price !== "number") throw new Error("상품 문서의 price 가 숫자가 아닙니다: " + JSON.stringify(d.price));
+
+      const quantity = 1;
+      tx.update(productRef, { stock: d.stock - 1 });
+      // 주문 문서 한 장 - 자동 ID, 필드는 다섯 개
+      tx.set(doc(collection(db, "orders")), {
+        userId: user.uid,
+        // 이름과 가격은 방금 트랜잭션 안에서 읽은 상품 문서 값
+        items: [{ productId: id, name: d.name, price: d.price, quantity }],
+        totalPrice: d.price * quantity,
+        status: "paid",
+        // 주문 시각 - 서버 시계로 적는다
+        createdAt: serverTimestamp()
+      });
+      return d.stock - 1;
+    });
+
+    if (left === null) { note.textContent = "재고가 없습니다"; return; }
+    note.textContent = "주문했습니다.";
+    // 줄어든 재고를 화면에도 적는다
+    const stockLine = box.querySelector(".stock");
+    if (stockLine) stockLine.textContent = stockText(left);
+  } catch (err) {
+    // 오류 글은 줄이지 않고 화면에 그대로 보여 준다
+    console.error(err);
+    note.textContent = "주문하지 못했습니다.\n" + errorText(err);
   }
 }
 
