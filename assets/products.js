@@ -63,8 +63,8 @@ function showError(box, err) {
 }
 
 /* --- 상품 목록 ---
-   more 가 참이면 「더 보기」 - 지금 보이는 마지막 상품 다음부터 둘을 더 가져와 아래에 이어 붙인다 */
-// 지금 보이는 마지막 상품의 문서 (다음 둘을 어디서부터 가져올지 Firestore 에 알려 준다)
+   more 가 참이면 「더 보기」 - 지금 보이는 마지막 상품 다음부터 셋을 더 가져와 아래에 이어 붙인다 */
+// 지금 보이는 마지막 상품의 문서 (다음 셋을 어디서부터 가져올지 Firestore 에 알려 준다)
 let lastDoc = null;
 // 이 화면을 그리려고 지금까지 읽은 문서 수
 let reads = 0;
@@ -80,7 +80,7 @@ async function loadList(more) {
   if (!more) { lastDoc = null; reads = 0; }
 
   try {
-    // 숨기지 않은 상품만 · 가격이 싼 것부터 · 둘만 - 거르고 줄 세우고 자르는 일을 Firestore 쿼리가 한다
+    // 숨기지 않은 상품만 · 가격이 싼 것부터 · 셋만 - 거르고 줄 세우고 자르는 일을 Firestore 쿼리가 한다
     // 받은 문서 수가 곧 읽은 문서 수
     const snap = await getDocs(query(
       collection(db, "products"),
@@ -88,14 +88,14 @@ async function loadList(more) {
       orderBy("price"),
       // 더 보기일 때만 - 지금 보이는 마지막 상품 다음부터
       ...(lastDoc ? [startAfter(lastDoc)] : []),
-      limit(2)
+      limit(3)
     ));
     paintList(snap.docs.map(toProduct), more);
     reads += snap.size;
     showReads(reads);
     if (snap.size) lastDoc = snap.docs[snap.size - 1];
-    // 둘을 다 채우지 못했으면 더 가져올 것이 없다
-    if (moreBox) moreBox.hidden = snap.size < 2;
+    // 셋을 다 채우지 못했으면 더 가져올 것이 없다
+    if (moreBox) moreBox.hidden = snap.size < 3;
   } catch (err) {
     // 오류 글은 줄이지 않고 콘솔에 그대로 찍고, 화면에는 한 줄만 보여 준다
     console.error(err);
