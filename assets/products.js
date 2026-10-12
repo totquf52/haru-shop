@@ -3,7 +3,7 @@
    문서 ID 는 shop.js 의 id(p1~p6)와 같다. 긴 설명(detail)과 그림(emoji)은 shop.js 것을 그대로 쓴다.
    화면을 그리는 일은 app.js 의 paintList · paintDetail 이 한다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -68,12 +68,23 @@ async function loadList() {
   if (!box) return;
 
   try {
-    // products 컬렉션을 통째로 읽는다 - 받은 문서 수가 곧 읽은 문서 수
-    const snap = await getDocs(collection(db, "products"));
+    // 숨기지 않은 상품만 · 가격이 싼 것부터 · 셋만 - 거르고 줄 세우고 자르는 일을 Firestore 쿼리가 한다
+    // 받은 문서 수가 곧 읽은 문서 수
+    const snap = await getDocs(query(
+      collection(db, "products"),
+      where("isVisible", "==", true),
+      orderBy("price"),
+      limit(3)
+    ));
     paintList(snap.docs.map(toProduct));
     showReads(snap.size);
   } catch (err) {
-    showError(box, err);
+    // 오류 글은 줄이지 않고 콘솔에 그대로 찍고, 화면에는 한 줄만 보여 준다
+    console.error(err);
+    const p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "목록을 불러오지 못했습니다";
+    box.replaceChildren(p);
     showReads(0);
   }
 }
