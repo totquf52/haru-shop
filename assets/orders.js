@@ -26,10 +26,44 @@ function dayText(createdAt) {
   return createdAt && createdAt.toDate ? createdAt.toDate().toLocaleDateString("ko-KR") : "";
 }
 
-// 주문 한 건을 한 줄로 그린다 - 주문한 날 · 상품 이름 · 합계 · status 값 그대로
+// status 값마다 손님이 읽는 말 (Firestore 에 저장된 값은 그대로 두고 화면의 말만 바꾼다)
+const STATUS_TEXT = {
+  paid: "주문 접수",
+  preparing: "포장 중",
+  shipped: "배송 출발",
+  delivered: "도착 완료",
+  canceled: "주문 취소됨"
+};
+// 단계 줄에 들어가는 네 값 - 이 순서대로 간다 (canceled 는 줄에 넣지 않는다)
+const STEPS = ["paid", "preparing", "shipped", "delivered"];
+
+// 네 단계를 한 줄로 그리고 지금 단계를 눈에 띄게 표시한다
+function stepLine(status) {
+  const line = document.createElement("div");
+  line.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:13px;color:var(--sub)";
+  STEPS.forEach((step, i) => {
+    if (i > 0) {
+      const bar = document.createElement("span");
+      bar.textContent = "-";
+      line.appendChild(bar);
+    }
+    const dot = document.createElement("span");
+    dot.textContent = STATUS_TEXT[step];
+    dot.style.cssText = step === status
+      ? "padding:2px 10px;border-radius:999px;background:var(--accent);color:#fff;font-weight:700"
+      : "padding:2px 10px;border-radius:999px;border:1px solid var(--line)";
+    line.appendChild(dot);
+  });
+  return line;
+}
+
+// 주문 한 건을 그린다 - 주문한 날 · 상품 이름 · 합계 · 손님이 읽는 말, 그 아래 단계 줄
 function orderRow(order) {
   const li = document.createElement("li");
-  li.style.cssText = "display:flex;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line, #e5e0d8)";
+  li.style.cssText = "padding:12px 0;border-bottom:1px solid var(--line, #e5e0d8)";
+
+  const top = document.createElement("div");
+  top.style.cssText = "display:flex;gap:16px;align-items:baseline";
 
   const day = document.createElement("span");
   day.textContent = dayText(order.createdAt);
@@ -42,11 +76,16 @@ function orderRow(order) {
   const total = document.createElement("span");
   total.textContent = Number(order.totalPrice).toLocaleString("ko-KR") + "원";
 
+  // 다섯 값이 아닌 값이 들어 있으면 「확인 중」
   const status = document.createElement("span");
-  status.textContent = order.status;
+  status.textContent = STATUS_TEXT[order.status] || "확인 중";
   status.style.cssText = "font-weight:700";
 
-  li.append(day, name, total, status);
+  top.append(day, name, total, status);
+  li.appendChild(top);
+
+  // 단계 줄은 네 값일 때만 그린다 (canceled 와 모르는 값은 말만 보여 준다)
+  if (STEPS.includes(order.status)) li.appendChild(stepLine(order.status));
   return li;
 }
 
