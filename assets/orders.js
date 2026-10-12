@@ -119,6 +119,9 @@ function listenMyOrders(uid) {
     snapshot.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
     paintOrders(orders);
 
+    // 처음 받는 알림은 전부 added 라 띄우지 않는다 - 내용이 바뀐 것(modified)이 있을 때만 한 줄을 띄운다
+    if (snapshot.docChanges().some(change => change.type === "modified")) showChanged();
+
     // 내 주문이 전부 끝났으면 리스너를 해제하고 안내 한 줄을 보여 준다
     if (orders.length > 0 && orders.every(order => DONE.includes(order.status))) {
       unsubscribe();
@@ -132,6 +135,23 @@ function listenMyOrders(uid) {
     const empty = document.querySelector("#my-orders-empty");
     if (empty) { empty.hidden = false; empty.textContent = "주문을 불러오지 못했습니다"; }
   });
+}
+
+// 화면 위쪽에 「주문 상태가 바뀌었습니다」 한 줄을 띄웠다가 조금 뒤에 스스로 지운다
+let changedTimer = null;
+function showChanged() {
+  let line = document.querySelector("#my-orders-changed");
+  if (!line) {
+    line = document.createElement("div");
+    line.id = "my-orders-changed";
+    line.setAttribute("role", "status");
+    line.textContent = "주문 상태가 바뀌었습니다";
+    line.style.cssText = "position:fixed;top:72px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:999px;background:var(--ink);color:#fff;font-size:14px;z-index:10";
+    document.body.appendChild(line);
+  }
+  line.hidden = false;
+  clearTimeout(changedTimer);
+  changedTimer = setTimeout(() => { line.hidden = true; }, 4000);
 }
 
 // 리스너를 해제한 뒤에만 「다시 확인」 버튼을 보여 준다
