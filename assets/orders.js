@@ -3,7 +3,7 @@
    로그인한 사람의 UID 와 userId 가 같은 주문만 쿼리로 고른다.
    로그인 상태를 지켜보는 일은 auth.js 가 한다 - 여기서는 확인이 끝나기를 기다렸다가 한 번만 건다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // index.html 과 같은 Firebase 설정
@@ -86,12 +86,29 @@ function listenMyOrders(uid) {
       console.log("[그만 듣기] 내 주문이 전부 끝나 리스너를 해제했습니다");
       const stopped = document.querySelector("#my-orders-stopped");
       if (stopped) stopped.hidden = false;
+      showRecheck(myOrders);
     }
   }, (err) => {
     console.error(err);
     const empty = document.querySelector("#my-orders-empty");
     if (empty) { empty.hidden = false; empty.textContent = "주문을 불러오지 못했습니다"; }
   });
+}
+
+// 리스너를 해제한 뒤에만 「다시 확인」 버튼을 보여 준다
+// 누르면 같은 쿼리로 한 번만 읽어 와서 다시 그린다 - 리스너는 다시 걸지 않는다
+function showRecheck(myOrders) {
+  const btn = document.querySelector("#my-orders-recheck");
+  if (!btn) return;
+  btn.hidden = false;
+  btn.onclick = async () => {
+    btn.disabled = true;
+    const snapshot = await getDocs(myOrders);
+    const orders = [];
+    snapshot.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
+    paintOrders(orders);
+    btn.disabled = false;
+  };
 }
 
 // 로그인한 사람이 누구인지 확인된 뒤에 듣기 시작한다
