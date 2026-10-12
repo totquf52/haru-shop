@@ -3,7 +3,7 @@
    문서 ID 는 shop.js 의 id(p1~p6)와 같다. 긴 설명(detail)과 그림(emoji)은 shop.js 것을 그대로 쓴다.
    화면을 그리는 일은 app.js 의 paintList · paintDetail 이 한다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -62,10 +62,22 @@ function showError(box, err) {
   box.replaceChildren(p);
 }
 
-/* --- 상품 목록 --- */
-async function loadList() {
+/* --- 상품 목록 ---
+   more 가 참이면 「더 보기」 - 지금 보이는 마지막 상품 다음부터 셋을 더 가져와 아래에 이어 붙인다 */
+// 지금 보이는 마지막 상품의 문서 (다음 셋을 어디서부터 가져올지 Firestore 에 알려 준다)
+let lastDoc = null;
+// 이 화면을 그리려고 지금까지 읽은 문서 수
+let reads = 0;
+
+async function loadList(more) {
   const box = document.querySelector("#product-list");
   if (!box) return;
+
+  const moreBox = document.querySelector("#more-box");
+  const moreNote = document.querySelector("#more-result");
+  if (moreNote) moreNote.textContent = "";
+  // 처음부터 다시 그릴 때는 자리와 숫자를 비운다
+  if (!more) { lastDoc = null; reads = 0; }
 
   try {
     // 숨기지 않은 상품만 · 가격이 싼 것부터 · 셋만 - 거르고 줄 세우고 자르는 일을 Firestore 쿼리가 한다
@@ -73,18 +85,30 @@ async function loadList() {
     const snap = await getDocs(query(
       collection(db, "products"),
       where("isVisible", "==", true),
-      orderBy("price", "desc"),
+      orderBy("price"),
+      // 더 보기일 때만 - 지금 보이는 마지막 상품 다음부터
+      ...(lastDoc ? [startAfter(lastDoc)] : []),
       limit(3)
     ));
-    paintList(snap.docs.map(toProduct));
-    showReads(snap.size);
+    paintList(snap.docs.map(toProduct), more);
+    reads += snap.size;
+    showReads(reads);
+    if (snap.size) lastDoc = snap.docs[snap.size - 1];
+    // 셋을 다 채우지 못했으면 더 가져올 것이 없다
+    if (moreBox) moreBox.hidden = snap.size < 3;
   } catch (err) {
     // 오류 글은 줄이지 않고 콘솔에 그대로 찍고, 화면에는 한 줄만 보여 준다
     console.error(err);
+    if (more) {
+      // 이미 보이는 목록은 그대로 두고 단추 아래에 적는다
+      if (moreNote) moreNote.textContent = "목록을 불러오지 못했습니다";
+      return;
+    }
     const p = document.createElement("p");
     p.className = "empty";
     p.textContent = "목록을 불러오지 못했습니다";
     box.replaceChildren(p);
+    if (moreBox) moreBox.hidden = true;
     showReads(0);
   }
 }
@@ -143,6 +167,13 @@ async function seedProducts(btn, note) {
 const seedBtn = document.querySelector("#btn-seed");
 const seedNote = document.querySelector("#seed-result");
 if (seedBtn && seedNote) seedBtn.addEventListener("click", () => seedProducts(seedBtn, seedNote));
+
+const moreBtn = document.querySelector("#btn-more");
+if (moreBtn) moreBtn.addEventListener("click", async () => {
+  moreBtn.disabled = true;
+  await loadList(true);
+  moreBtn.disabled = false;
+});
 
 const loading = document.querySelector("#product-list, #product-detail");
 if (loading) loading.innerHTML = '<p class="empty">상품을 불러오는 중…</p>';

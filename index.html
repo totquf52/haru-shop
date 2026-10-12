@@ -44,6 +44,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <h2>좁은 부엌에 놓을 것들</h2>
   <p class="lead">자취 2년차에 한 번은 바꾸게 되는 여섯 가지를 두었습니다. 하나씩 눌러 보세요.</p>
   <div class="grid" id="product-list"></div>
+  <!-- 더 가져올 것이 없으면 숨긴다 (assets/products.js 가 연다) -->
+  <div id="more-box" hidden style="margin:20px 0 0">
+    <button class="btn ghost" type="button" id="btn-more">더 보기</button>
+    <p id="more-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:13px"></p>
+  </div>
   <!-- 이 화면을 그리려고 Firestore 에서 읽은 문서 수 (assets/products.js 가 적는다) -->
   <p id="read-count" style="margin:20px 0 0;font-size:13px;color:var(--sub)"></p>
   <!-- 로그인한 사람에게만 보인다 (assets/auth.js 가 연다) -->

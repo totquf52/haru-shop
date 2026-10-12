@@ -94,12 +94,13 @@ function paintHero() {
 
 /* --- 상품 목록 ---
    items 는 assets/products.js 가 Firestore 에서 읽어 와 넘겨준다
-   (이름 · 가격 · 한 줄 소개 · 재고는 Firestore, 그림은 shop.js) */
-function paintList(items) {
+   (이름 · 가격 · 한 줄 소개 · 재고는 Firestore, 그림은 shop.js)
+   append 가 참이면 이미 그린 카드 아래에 이어 붙인다 (「더 보기」) */
+function paintList(items, append) {
   const box = document.querySelector("#product-list");
   if (!box) return;
 
-  box.innerHTML = items.map(p => `
+  const cards = items.map(p => `
     <a class="card" href="product.html?id=${encodeURIComponent(p.id)}">
       <div class="thumb">${p.emoji}</div>
       <h3>${esc(p.name)}</h3>
@@ -107,6 +108,9 @@ function paintList(items) {
       <div class="price">${won(p.price)}</div>
       <div class="stock">${stockText(p.stock)}</div>
     </a>`).join("");
+
+  if (append) box.insertAdjacentHTML("beforeend", cards);
+  else box.innerHTML = cards;
 }
 
 /* --- 상품 상세 ---
