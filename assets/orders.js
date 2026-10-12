@@ -67,14 +67,26 @@ function paintOrders(orders) {
   if (empty) empty.hidden = orders.length > 0;
 }
 
+// 더 바뀔 일이 없는 상태 - 내 주문이 전부 이 둘 가운데 하나면 그만 듣는다
+const DONE = ["delivered", "canceled"];
+
 // 로그인한 사람의 주문만 듣는다 - 리스너는 여기 한 군데서만 건다
 function listenMyOrders(uid) {
   const myOrders = query(collection(db, "orders"), where("userId", "==", uid));
-  onSnapshot(myOrders, (snapshot) => {
+  // onSnapshot 이 돌려준 「끊는 함수」를 받아 둔다
+  const unsubscribe = onSnapshot(myOrders, (snapshot) => {
     console.log("[주문 알림] 내 주문 " + snapshot.size + "건을 받았습니다");
     const orders = [];
     snapshot.forEach((doc) => orders.push({ id: doc.id, ...doc.data() }));
     paintOrders(orders);
+
+    // 내 주문이 전부 끝났으면 리스너를 해제하고 안내 한 줄을 보여 준다
+    if (orders.length > 0 && orders.every(order => DONE.includes(order.status))) {
+      unsubscribe();
+      console.log("[그만 듣기] 내 주문이 전부 끝나 리스너를 해제했습니다");
+      const stopped = document.querySelector("#my-orders-stopped");
+      if (stopped) stopped.hidden = false;
+    }
   }, (err) => {
     console.error(err);
     const empty = document.querySelector("#my-orders-empty");
