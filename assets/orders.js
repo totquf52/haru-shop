@@ -150,6 +150,30 @@ function showStopped(box, q) {
   box.append(p, result);
 }
 
+/* --- 화면 위쪽 한 줄 알림 ---
+   조금 있다가 스스로 사라진다. 이미 떠 있으면 글만 바꾸고 시간을 다시 잰다. */
+let toastTimer = 0;
+
+function showToast(text) {
+  let toast = document.querySelector("#order-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "order-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1000;"
+      + "background:var(--ink);color:#fff;padding:10px 20px;border-radius:999px;font-size:14px;"
+      + "box-shadow:0 4px 14px rgba(0,0,0,.18);max-width:calc(100vw - 32px)";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = text;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.remove(), 4000);
+}
+
+// 주문마다 마지막으로 받은 status (문서 ID → status) - 상태가 바뀌었는지 견주어 본다
+const lastStatus = new Map();
+
 // 리스너는 한 번만 건다
 let listening = false;
 
@@ -174,6 +198,17 @@ async function listenOrders() {
     snap => {
       console.log("[주문 알림] 주문 " + snap.size + "건을 받았습니다");
       paintOrders(box, snap.docs);
+
+      // 이번 알림에서 달라진 문서만 본다 - 처음 받는 알림은 전부 added 라서 한 줄을 띄우지 않는다
+      // 내용이 바뀐 것(modified) 가운데 status 가 전과 달라진 것이 있을 때만 띄운다
+      let changed = false;
+      snap.docChanges().forEach(c => {
+        const status = c.doc.data().status;
+        if (c.type === "modified" && lastStatus.get(c.doc.id) !== status) changed = true;
+        if (c.type === "removed") lastStatus.delete(c.doc.id);
+        else lastStatus.set(c.doc.id, status);
+      });
+      if (changed) showToast("주문 상태가 바뀌었습니다");
 
       // 주문이 전부 끝났으면(delivered · canceled) 더 바뀔 일이 없으니 그만 듣는다
       // 주문이 한 건도 없을 때는 새 주문이 들어올 수 있으니 계속 듣는다
