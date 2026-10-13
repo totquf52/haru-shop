@@ -1,9 +1,10 @@
 /* --- 내 주문 (Firestore) ---
    마이페이지의 「내 주문」 목록. orders 컬렉션에서 userId 가 로그인한 사람의 UID 와 같은 주문만 듣는다 (onSnapshot).
    주문 문서가 바뀌면 새로고침 없이 목록을 다시 그린다.
-   주문 상태를 바꾸는 일은 하지 않는다 - 읽기만 한다. dataLayer 에는 아무것도 보내지 않는다. */
+   「주문 취소」 단추도 이 파일이 한다 - 결제 완료(paid) 주문의 status 만 canceled 로 고친다.
+   dataLayer 에는 아무것도 보내지 않는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, query, where, onSnapshot, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // index.html 과 같은 Firebase 설정
@@ -76,12 +77,69 @@ function paintStatus(cell, status) {
   cell.appendChild(line);
 }
 
+/* --- 주문 취소 ---
+   결제 완료(paid) 주문에만 상태 칸 아래에 단추를 하나 붙인다. 누르면 그 주문 문서의 status 만 canceled 로 고친다.
+   화면은 누르자마자 「주문 취소」로 바꾸고, 저장에 실패하면 누르기 전(결제 완료)으로 되돌린다. */
+// 취소를 누른 주문이 지금 어떤지 (문서 ID → "saving" 저장 중 · "failed" 저장 실패) - 목록을 다시 그려도 남는다
+const cancelState = new Map();
+
+function paintCancel(cell, id, status) {
+  const state = cancelState.get(id);
+  // 저장 중이 아니면 paid 인 주문에만 붙인다
+  if (state !== "saving" && status !== "paid") return;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn ghost";
+  btn.style.cssText = "display:block;margin:10px 0 0;padding:6px 14px;font-size:13px";
+  // 저장되는 동안에는 누를 수 없다
+  btn.disabled = state === "saving";
+  btn.textContent = state === "saving" ? "저장 중" : "주문 취소";
+  btn.addEventListener("click", () => cancelOrder(id));
+  cell.appendChild(btn);
+
+  if (state === "failed") {
+    const p = document.createElement("p");
+    p.setAttribute("role", "status");
+    p.style.cssText = "margin:8px 0 0;font-size:13px";
+    p.textContent = "주문이 취소되지 않았어요. 주문은 결제 완료 그대로예요. 한 번 더 눌러 주세요.";
+    cell.appendChild(p);
+  }
+}
+
+// 지금 화면에 있는 그 주문의 상태 칸만 다시 그린다 (목록 전체는 건드리지 않는다)
+function repaintStatus(id, status) {
+  const tr = [...document.querySelectorAll("#order-list tr")].find(r => r.dataset.orderId === id);
+  if (!tr) return;
+  const cell = tr.cells[tr.cells.length - 1];
+  cell.replaceChildren();
+  paintStatus(cell, status);
+  paintCancel(cell, id, status);
+}
+
+async function cancelOrder(id) {
+  if (cancelState.get(id) === "saving") return;
+  cancelState.set(id, "saving");
+  repaintStatus(id, "canceled");
+  try {
+    // status 한 필드만 고친다 - 다른 필드는 그대로 둔다
+    await updateDoc(doc(db, "orders", id), { status: "canceled" });
+    cancelState.delete(id);
+    repaintStatus(id, "canceled");
+  } catch (err) {
+    console.error(err);
+    cancelState.set(id, "failed");
+    // 누르기 전으로 되돌린다
+    repaintStatus(id, "paid");
+  }
+}
+
 // 받은 주문을 최신순으로 줄 세워 표로 그린다 (정렬은 쿼리가 아니라 여기서 한다)
 function paintOrders(box, docs) {
   if (!docs.length) { note(box, "아직 주문이 없습니다."); return; }
 
   const rows = docs
-    .map(snap => snap.data())
+    .map(snap => ({ ...snap.data(), orderId: snap.id }))
     .sort((a, b) => orderTime(b) - orderTime(a));
 
   const table = document.createElement("table");
@@ -102,7 +160,11 @@ function paintOrders(box, docs) {
       items.map(i => i.quantity > 1 ? i.name + " × " + i.quantity : i.name).join(", "),
       typeof d.totalPrice === "number" ? won(d.totalPrice) : String(d.totalPrice ?? "")
     ].forEach(text => { tr.insertCell().textContent = text; });
-    paintStatus(tr.insertCell(), d.status);
+    // 「주문 취소」가 이 줄을 다시 찾을 수 있게 문서 ID 를 적어 둔다
+    tr.dataset.orderId = d.orderId;
+    const cell = tr.insertCell();
+    paintStatus(cell, d.status);
+    paintCancel(cell, d.orderId, d.status);
   });
 
   box.replaceChildren(table);
