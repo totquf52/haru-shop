@@ -55,11 +55,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <span data-auth-linked-google hidden>연결됨</span>
     <p data-auth-link-result role="status" aria-live="polite" style="margin:12px 0 0;font-size:13px;color:var(--sub)"></p>
   </div>
+  <!-- 내 주문 - 로그인한 사람의 주문만 Firestore 에서 듣는다 (assets/orders.js 가 그린다) -->
+  <h2 style="margin-top:8px">내 주문</h2>
+  <div id="order-list" style="margin:0 0 32px"></div>
   <button class="btn ghost" type="button" data-auth-logout>로그아웃</button>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
 <script src="assets/shop.js"></script>
 <script src="assets/app.js"></script>
 <script type="module" src="assets/auth.js"></script>
+<script type="module" src="assets/orders.js"></script>
 </body>
 </html>

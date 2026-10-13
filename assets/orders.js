@@ -1,0 +1,107 @@
+/* --- 내 주문 (Firestore) ---
+   마이페이지의 「내 주문」 목록. orders 컬렉션에서 userId 가 로그인한 사람의 UID 와 같은 주문만 듣는다 (onSnapshot).
+   주문 문서가 바뀌면 새로고침 없이 목록을 다시 그린다.
+   주문 상태를 바꾸는 일은 하지 않는다 - 읽기만 한다. dataLayer 에는 아무것도 보내지 않는다. */
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getFirestore, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+// index.html 과 같은 Firebase 설정
+const firebaseConfig = {
+  apiKey: "AIzaSyC9IOJWMP2AL0JvLg_Ipq_EV0h2ChQrRAg",
+  authDomain: "haru-shop-80c06.firebaseapp.com",
+  projectId: "haru-shop-80c06",
+  storageBucket: "haru-shop-80c06.firebasestorage.app",
+  messagingSenderId: "205447160425",
+  appId: "1:205447160425:web:3b845512888e3c30e7b8f8"
+};
+
+// 화면이 이미 연결해 두었으면 그것을 쓰고, 없을 때만 새로 연결한다
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const db = getFirestore(app);
+// 누가 로그인했는지 읽는다 (로그인 상태를 지켜보는 일은 auth.js 가 한다)
+const auth = getAuth(app);
+
+// 오류 글을 줄이지 않고 그대로 적는다 (오류 코드가 글에 없으면 뒤에 붙인다)
+function errorText(err) {
+  const text = String(err);
+  return err && err.code && !text.includes(err.code) ? text + " (" + err.code + ")" : text;
+}
+
+// 주문 시각(createdAt)을 밀리초로 - 서버 시각이 아직 안 적힌 주문은 방금 것으로 본다
+function orderTime(d) {
+  return d.createdAt && typeof d.createdAt.toMillis === "function" ? d.createdAt.toMillis() : Date.now();
+}
+
+function note(box, text) {
+  const p = document.createElement("p");
+  p.className = "empty";
+  p.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere";
+  p.textContent = text;
+  box.replaceChildren(p);
+}
+
+// 받은 주문을 최신순으로 줄 세워 표로 그린다 (정렬은 쿼리가 아니라 여기서 한다)
+function paintOrders(box, docs) {
+  if (!docs.length) { note(box, "아직 주문이 없습니다."); return; }
+
+  const rows = docs
+    .map(snap => snap.data())
+    .sort((a, b) => orderTime(b) - orderTime(a));
+
+  const table = document.createElement("table");
+  table.className = "cart";
+  const head = table.createTHead().insertRow();
+  ["주문한 날", "상품", "합계", "상태"].forEach(t => {
+    const th = document.createElement("th");
+    th.textContent = t;
+    head.appendChild(th);
+  });
+
+  const body = table.createTBody();
+  rows.forEach(d => {
+    const tr = body.insertRow();
+    const items = Array.isArray(d.items) ? d.items : [];
+    [
+      new Date(orderTime(d)).toLocaleDateString("ko-KR"),
+      items.map(i => i.quantity > 1 ? i.name + " × " + i.quantity : i.name).join(", "),
+      typeof d.totalPrice === "number" ? won(d.totalPrice) : String(d.totalPrice ?? ""),
+      // status 는 저장된 값 그대로
+      String(d.status ?? "")
+    ].forEach(text => { tr.insertCell().textContent = text; });
+  });
+
+  box.replaceChildren(table);
+}
+
+// 리스너는 한 번만 건다
+let listening = false;
+
+async function listenOrders() {
+  const box = document.querySelector("#order-list");
+  if (!box || listening) return;
+  listening = true;
+
+  note(box, "주문을 불러오는 중…");
+  // 브라우저가 기억하는 로그인을 다 읽은 뒤에 - 누구인지 확인된 다음에야 듣기 시작한다
+  await auth.authStateReady();
+  const user = auth.currentUser;
+  // 로그인하지 않았으면 듣지 않는다 (auth.js 가 로그인 화면으로 돌려보낸다)
+  if (!user) return;
+
+  // 내 주문만 - 거르는 일을 Firestore 쿼리가 한다. 정렬(orderBy)은 넣지 않는다
+  onSnapshot(
+    query(collection(db, "orders"), where("userId", "==", user.uid)),
+    snap => {
+      console.log("[주문 알림] 주문 " + snap.size + "건을 받았습니다");
+      paintOrders(box, snap.docs);
+    },
+    err => {
+      // 오류 글은 줄이지 않고 화면에 그대로 보여 준다
+      console.error(err);
+      note(box, "주문을 불러오지 못했습니다.\n" + errorText(err));
+    }
+  );
+}
+
+listenOrders();
