@@ -74,6 +74,9 @@ function paintOrders(box, docs) {
   box.replaceChildren(table);
 }
 
+// 더 바뀔 일이 없는 주문 상태
+const DONE = ["delivered", "canceled"];
+
 // 리스너는 한 번만 건다
 let listening = false;
 
@@ -90,11 +93,23 @@ async function listenOrders() {
   if (!user) return;
 
   // 내 주문만 - 거르는 일을 Firestore 쿼리가 한다. 정렬(orderBy)은 넣지 않는다
-  onSnapshot(
+  // onSnapshot 이 돌려준 함수 - 부르면 그만 듣는다
+  const stop = onSnapshot(
     query(collection(db, "orders"), where("userId", "==", user.uid)),
     snap => {
       console.log("[주문 알림] 주문 " + snap.size + "건을 받았습니다");
       paintOrders(box, snap.docs);
+
+      // 주문이 전부 끝났으면(delivered · canceled) 더 바뀔 일이 없으니 그만 듣는다
+      // 주문이 한 건도 없을 때는 새 주문이 들어올 수 있으니 계속 듣는다
+      const allDone = snap.size > 0 && snap.docs.every(d => DONE.includes(d.data().status));
+      if (!allDone) return;
+      stop();
+      console.log("[그만 듣기] 주문 " + snap.size + "건이 모두 끝나 리스너를 해제했습니다");
+      const p = document.createElement("p");
+      p.style.cssText = "margin:12px 0 0;font-size:13px;color:var(--sub)";
+      p.textContent = "모든 주문이 끝나 실시간 확인을 멈췄습니다. 새로 고치면 다시 확인합니다.";
+      box.appendChild(p);
     },
     err => {
       // 오류 글은 줄이지 않고 화면에 그대로 보여 준다
