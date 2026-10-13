@@ -6,6 +6,7 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, runTransaction, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -22,6 +23,8 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 // 「바로 주문」을 누른 사람이 누구인지 읽는다 (로그인 상태를 지켜보는 일은 auth.js 가 한다)
 const auth = getAuth(app);
+// 상품 사진이 있는 버킷 - 설정의 storageBucket 값 그대로
+const storage = getStorage(app);
 
 // 「상품 올리기」가 올리는 다섯 장 - 재고와 보이기 값 (이름 · 가격 · 한 줄 소개는 shop.js 에서 읽는다)
 const SEED = [
@@ -42,6 +45,8 @@ function toProduct(snap) {
     price: Number(d.price),
     summary: d.summary,
     stock: Number(d.stock),
+    // 상품 사진이 있는 Storage 경로 (예: products/p1/main.jpg). 사진이 없는 상품은 빈 글자
+    imagePath: d.imagePath || "",
     emoji: local.emoji || "",
     detail: local.detail || []
   };
@@ -64,6 +69,35 @@ function showError(box, err) {
   p.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere";
   p.textContent = "상품을 불러오지 못했습니다.\n" + errorText(err);
   box.replaceChildren(p);
+}
+
+/* --- 상품 사진 ---
+   방금 그린 카드 가운데 imagePath 가 있는 상품만, 그 경로로 다운로드 URL 을 받아 그림 글자 자리에 사진을 넣는다.
+   imagePath 가 없거나 사진을 받지 못하면 그림 글자 그대로 둔다.
+   Storage 에 묻는 일이라 Firestore 읽은 문서 수(reads)에는 더하지 않는다. */
+function showPhotos(items) {
+  const box = document.querySelector("#product-list");
+  if (!box) return;
+
+  // 방금 그린 카드는 목록 맨 뒤의 items.length 장
+  const cards = items.length ? Array.from(box.querySelectorAll("a.card")).slice(-items.length) : [];
+  items.forEach((p, i) => {
+    if (!p.imagePath) return;
+    const thumb = cards[i] && cards[i].querySelector(".thumb");
+    if (!thumb) return;
+
+    getDownloadURL(ref(storage, p.imagePath)).then(url => {
+      const img = document.createElement("img");
+      img.alt = p.name;
+      img.style.cssText = "display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px";
+      // 사진을 다 받은 뒤에 그림 글자와 바꾼다 (못 받으면 그림 글자가 남는다)
+      img.addEventListener("load", () => thumb.replaceChildren(img));
+      img.src = url;
+    }).catch(err => {
+      // 오류 글은 줄이지 않고 콘솔에 그대로 찍는다
+      console.error(err);
+    });
+  });
 }
 
 /* --- 상품 목록 ---
@@ -94,7 +128,10 @@ async function loadList(more) {
       ...(lastDoc ? [startAfter(lastDoc)] : []),
       limit(3)
     ));
-    paintList(snap.docs.map(toProduct), more);
+    const items = snap.docs.map(toProduct);
+    paintList(items, more);
+    // 사진은 기다리지 않는다 - 주소를 받는 대로 카드에 넣는다
+    showPhotos(items);
     reads += snap.size;
     showReads(reads);
     if (snap.size) lastDoc = snap.docs[snap.size - 1];
