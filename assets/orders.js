@@ -3,7 +3,7 @@
    주문 문서가 바뀌면 새로고침 없이 목록을 다시 그린다.
    주문 상태를 바꾸는 일은 하지 않는다 - 읽기만 한다. dataLayer 에는 아무것도 보내지 않는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // index.html 과 같은 Firebase 설정
@@ -77,6 +77,45 @@ function paintOrders(box, docs) {
 // 더 바뀔 일이 없는 주문 상태
 const DONE = ["delivered", "canceled"];
 
+/* --- 멈춤 안내와 「다시 확인」 ---
+   리스너를 해제한 뒤에만 주문 목록 아래에 붙인다.
+   「다시 확인」은 내 주문을 한 번만 읽어 와 다시 그린다 - 리스너를 다시 걸지 않는다. */
+function showStopped(box, q) {
+  const p = document.createElement("p");
+  p.style.cssText = "margin:12px 0 0;font-size:13px;color:var(--sub)";
+  p.textContent = "모든 주문이 끝나 실시간 확인을 멈췄습니다. 새로 고치면 다시 확인합니다.";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn ghost";
+  btn.id = "order-recheck";
+  btn.style.cssText = "margin-left:10px;padding:6px 14px;font-size:13px";
+  btn.textContent = "다시 확인";
+  p.appendChild(btn);
+
+  const result = document.createElement("p");
+  result.style.cssText = "margin:8px 0 0;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere";
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    result.textContent = "";
+    try {
+      // 한 번 읽고 끝 - 듣는 것이 아니라서 그 뒤에 바뀐 것은 다시 눌러야 보인다
+      const snap = await getDocs(q);
+      paintOrders(box, snap.docs);
+      // 다시 그리면 안내와 단추가 지워지니 새로 붙인다
+      showStopped(box, q);
+    } catch (err) {
+      // 오류 글은 줄이지 않고 화면에 그대로 보여 준다. 보이던 목록은 그대로 둔다
+      console.error(err);
+      result.textContent = "주문을 불러오지 못했습니다.\n" + errorText(err);
+      btn.disabled = false;
+    }
+  });
+
+  box.append(p, result);
+}
+
 // 리스너는 한 번만 건다
 let listening = false;
 
@@ -93,9 +132,11 @@ async function listenOrders() {
   if (!user) return;
 
   // 내 주문만 - 거르는 일을 Firestore 쿼리가 한다. 정렬(orderBy)은 넣지 않는다
+  // 듣기와 「다시 확인」이 같은 쿼리를 쓴다
+  const q = query(collection(db, "orders"), where("userId", "==", user.uid));
   // onSnapshot 이 돌려준 함수 - 부르면 그만 듣는다
   const stop = onSnapshot(
-    query(collection(db, "orders"), where("userId", "==", user.uid)),
+    q,
     snap => {
       console.log("[주문 알림] 주문 " + snap.size + "건을 받았습니다");
       paintOrders(box, snap.docs);
@@ -106,10 +147,7 @@ async function listenOrders() {
       if (!allDone) return;
       stop();
       console.log("[그만 듣기] 주문 " + snap.size + "건이 모두 끝나 리스너를 해제했습니다");
-      const p = document.createElement("p");
-      p.style.cssText = "margin:12px 0 0;font-size:13px;color:var(--sub)";
-      p.textContent = "모든 주문이 끝나 실시간 확인을 멈췄습니다. 새로 고치면 다시 확인합니다.";
-      box.appendChild(p);
+      showStopped(box, q);
     },
     err => {
       // 오류 글은 줄이지 않고 화면에 그대로 보여 준다
