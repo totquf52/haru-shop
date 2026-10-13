@@ -41,6 +41,41 @@ function note(box, text) {
   box.replaceChildren(p);
 }
 
+/* --- 주문 상태를 손님이 읽는 말로 ---
+   저장된 status 값은 그대로 두고 화면에 적는 말만 바꾼다. 영어 값은 화면에 적지 않는다. */
+// 단계 줄 - 순서대로 네 단계
+const STEPS = [
+  { status: "paid", label: "결제 완료" },
+  { status: "preparing", label: "상품 준비 중" },
+  { status: "shipped", label: "배송 중" },
+  { status: "delivered", label: "배송 완료" }
+];
+
+function paintStatus(cell, status) {
+  const now = STEPS.findIndex(s => s.status === status);
+
+  const label = document.createElement("div");
+  label.style.fontWeight = "700";
+  // 취소는 단계 줄에 넣지 않는다. 표에 없는 값은 「확인 중」
+  label.textContent = now >= 0 ? STEPS[now].label : status === "canceled" ? "주문 취소" : "확인 중";
+  cell.appendChild(label);
+  if (now < 0) return;
+
+  const line = document.createElement("ol");
+  line.style.cssText = "list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;font-size:12px";
+  STEPS.forEach((s, i) => {
+    const li = document.createElement("li");
+    li.textContent = s.label;
+    // 지금 단계는 색을 채워 눈에 띄게, 아직 오지 않은 단계는 흐리게
+    li.style.cssText = "padding:2px 10px;border-radius:999px;border:1px solid var(--line);"
+      + (i === now ? "background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700"
+        : i < now ? "color:var(--ink)" : "color:var(--sub);opacity:.6");
+    if (i === now) li.setAttribute("aria-current", "step");
+    line.appendChild(li);
+  });
+  cell.appendChild(line);
+}
+
 // 받은 주문을 최신순으로 줄 세워 표로 그린다 (정렬은 쿼리가 아니라 여기서 한다)
 function paintOrders(box, docs) {
   if (!docs.length) { note(box, "아직 주문이 없습니다."); return; }
@@ -65,10 +100,9 @@ function paintOrders(box, docs) {
     [
       new Date(orderTime(d)).toLocaleDateString("ko-KR"),
       items.map(i => i.quantity > 1 ? i.name + " × " + i.quantity : i.name).join(", "),
-      typeof d.totalPrice === "number" ? won(d.totalPrice) : String(d.totalPrice ?? ""),
-      // status 는 저장된 값 그대로
-      String(d.status ?? "")
+      typeof d.totalPrice === "number" ? won(d.totalPrice) : String(d.totalPrice ?? "")
     ].forEach(text => { tr.insertCell().textContent = text; });
+    paintStatus(tr.insertCell(), d.status);
   });
 
   box.replaceChildren(table);
