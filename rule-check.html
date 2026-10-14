@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>규칙 확인 화면 — 하루살림</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="assets/style.css">
+
+<!-- 동의 배너 (태그 관리자보다 먼저) -->
+<script src="assets/consent.js"></script>
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-MQ9XCH2B');</script>
+<!-- End Google Tag Manager -->
+
+</head>
+<body>
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MQ9XCH2B"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<!-- 이 화면은 가게 메뉴에 넣지 않는다 - 주소를 직접 넣어서 연다 -->
+<header class="site"><div class="wrap">
+  <a class="brand" href="index.html">하루살림</a>
+  <nav class="site">
+    <a href="index.html">상품</a>
+    <a href="about.html">가게 소개</a>
+    <a href="shipping.html">배송·교환</a>
+    <a href="cart.html">장바구니<span class="cart-count">0</span></a>
+  </nav>
+</div></header>
+
+<main><div class="wrap">
+  <h2>규칙 확인 화면</h2>
+
+  <!-- 로그인했는지 확인하는 동안 -->
+  <p id="rule-checking" class="lead">로그인했는지 확인하는 중…</p>
+
+  <!-- 로그인하지 않았으면 이 한 줄만 보인다 (assets/rule-check.js 가 연다) -->
+  <p id="rule-login" hidden>로그인한 뒤에 쓸 수 있습니다. <a href="login.html?next=rule-check.html">로그인하기</a></p>
+
+  <!-- 로그인한 사람에게만 보인다 (assets/rule-check.js 가 연다) -->
+  <div id="rule-panel" hidden>
+    <p style="margin:0 0 4px">이메일: <span id="rule-email" data-clarity-mask="true" style="font-weight:700"></span></p>
+    <p style="margin:0 0 24px">UID: <span id="rule-uid" style="font-weight:700;overflow-wrap:anywhere"></span></p>
+
+    <section style="margin:0 0 28px">
+      <button class="btn" type="button" id="btn-read-all">주문 전체 읽기</button>
+      <div id="result-read-all" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></div>
+    </section>
+
+    <section style="margin:0 0 28px">
+      <button class="btn" type="button" id="btn-fix-my-order">내 주문 금액 고치기</button>
+      <div id="result-fix-my-order" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></div>
+    </section>
+
+    <section style="margin:0 0 28px">
+      <button class="btn" type="button" id="btn-price-zero">상품 가격 0원으로</button>
+      <div id="result-price-zero" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></div>
+    </section>
+  </div>
+</div></main>
+<footer class="site"><div class="wrap"></div></footer>
+<script src="assets/shop.js"></script>
+<script src="assets/app.js"></script>
+<script type="module" src="assets/auth.js"></script>
+<script type="module" src="assets/rule-check.js"></script>
+</body>
+</html>
