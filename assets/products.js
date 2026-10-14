@@ -154,6 +154,36 @@ async function loadList(more) {
   }
 }
 
+/* --- 상세 화면 사진 ---
+   imagePath 가 있으면 목록과 같은 방법으로 다운로드 URL 을 받아 그림 글자 칸에 사진을 넣는다.
+   칸 크기는 그림 글자 칸 그대로 두고 사진이 그 칸을 채운다 (object-fit: cover).
+   imagePath 가 없거나 사진을 받지 못하면 그림 글자 그대로 둔다.
+   Storage 에 묻는 일이라 Firestore 읽은 문서 수(reads)에는 더하지 않는다. */
+function showDetailPhoto(box, p) {
+  if (!p.imagePath) return;
+  const thumb = box.querySelector(".thumb");
+  if (!thumb) return;
+
+  getDownloadURL(ref(storage, p.imagePath)).then(url => {
+    const img = document.createElement("img");
+    img.alt = p.name;
+    img.style.cssText = "display:block;width:100%;height:100%;object-fit:cover";
+    // 사진을 다 받은 뒤에 그림 글자와 바꾼다 (못 받으면 그림 글자가 남는다)
+    img.addEventListener("load", () => {
+      // 그림 글자 칸의 지금 높이를 그대로 지킨다
+      const h = thumb.offsetHeight;
+      thumb.style.height = h + "px";
+      thumb.style.padding = "0";
+      thumb.style.overflow = "hidden";
+      thumb.replaceChildren(img);
+    });
+    img.src = url;
+  }).catch(err => {
+    // 오류 글은 줄이지 않고 콘솔에 그대로 찍는다
+    console.error(err);
+  });
+}
+
 /* --- 상품 상세 --- */
 async function loadDetail() {
   const box = document.querySelector("#product-detail");
@@ -165,7 +195,10 @@ async function loadDetail() {
   try {
     // 주소의 id 와 같은 문서 한 장만 읽는다
     const snap = await getDoc(doc(db, "products", id));
-    paintDetail(snap.exists() ? toProduct(snap) : null);
+    const item = snap.exists() ? toProduct(snap) : null;
+    paintDetail(item);
+    // 사진은 기다리지 않는다 - 주소를 받는 대로 그림 글자 자리에 넣는다
+    if (item) showDetailPhoto(box, item);
     if (snap.exists()) addOrderButton(box, id);
     showReads(snap.exists() ? 1 : 0);
   } catch (err) {
