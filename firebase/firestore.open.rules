@@ -1,0 +1,14 @@
+// 배포하지 않는다 - 테스트에서 "문이 열려 있던 판" 으로만 쓴다
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /orders/{orderId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

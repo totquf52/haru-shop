@@ -28,8 +28,16 @@ beforeEach(async () => {
   await testEnv.clearFirestore();
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
-    await setDoc(doc(db, "products/p1"), { name: "연습 상품", price: 12000, stock: 10 });
-    await setDoc(doc(db, "orders/o1"), { userId: "cust02", totalPrice: 12000, status: "paid" });
+    await setDoc(doc(db, "products/p1"), {
+      name: "연습 상품",
+      price: 12000,
+      stock: 10,
+    });
+    await setDoc(doc(db, "orders/o1"), {
+      userId: "cust02",
+      totalPrice: 12000,
+      status: "paid",
+    });
   });
 });
 
@@ -39,7 +47,17 @@ after(async () => {
 });
 
 // 6. 테스트
-test("로그인 안 한 사람이 상품을 읽는다", async () => {
+test("손님 누구나 상품 p1 을 볼 수 있다", async () => {
   const guest = testEnv.unauthenticatedContext();
   await assertSucceeds(getDoc(doc(guest.firestore(), "products/p1")));
+});
+
+test("손님이 남의 주문을 읽는다", async () => {
+  const 사람 = testEnv.authenticatedContext("cust01");
+  await assertFails(getDoc(doc(사람.firestore(), "orders/o1")));
+});
+
+test("직원이 남의 주문을 읽는다", async () => {
+  const staff = testEnv.authenticatedContext("staff01", { role: "staff" });
+  await assertSucceeds(getDoc(doc(staff.firestore(), "orders/o1")));
 });
