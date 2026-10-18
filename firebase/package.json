@@ -1,0 +1,14 @@
+{
+  "name": "haru-shop-rules",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-haru-shop \"node --test rules.test.js\"",
+    "test:spider": "firebase emulators:exec --only firestore --project demo-spider-shop \"node --test spider/spider.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.0.0",
+    "firebase-tools": "15.34.0"
+  }
+}
