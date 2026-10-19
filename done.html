@@ -37,16 +37,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div></header>
 
 <main><div class="wrap">
-  <h2>주문이 접수되었습니다</h2>
-  <div class="prose">
+  <h2 id="done-title">주문이 접수되었습니다</h2>
+  <div class="prose" id="done-prose">
     <p>연습용 주문이라 실제로 배송되지는 않습니다.</p>
     <p>영업일 기준 이틀 안에 보내드리는 것이 원래 약속입니다.</p>
   </div>
+  <!-- 결제 결과 (assets/done.js 가 채운다) -->
+  <p id="done-result" style="white-space:pre-wrap;overflow-wrap:anywhere"></p>
   <a class="btn" href="index.html">계속 둘러보기</a>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
 <script src="assets/shop.js"></script>
 <script src="assets/app.js"></script>
 <script type="module" src="assets/auth.js"></script>
+<script type="module" src="assets/done.js"></script>
 </body>
 </html>

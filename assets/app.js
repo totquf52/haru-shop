@@ -232,37 +232,10 @@ function paintCheckout() {
   form.addEventListener("submit", e => {
     e.preventDefault();
 
-    // ▼ 여기에 「결제를 마쳤다」를 알리는 코드가 들어갑니다 (뒤 수업에서)
-    // ▼ 「결제를 마쳤다」(purchase) - 「결제하기」를 눌러 주문 완료로 넘어가는 순간
-    // 장바구니를 비우는 줄보다 앞이라 주문한 상품 값을 아직 읽을 수 있다
-    // 주문 번호 - 누른 순간의 시각(1000분의 1초)과 무작위 글자를 이어 붙인다
-    const transactionId = "HARU-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
-    // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
-    window.dataLayer = window.dataLayer || [];
-    // 앞에서 넣은 상품 값이 섞이지 않게 먼저 비운다
-    dataLayer.push({ ecommerce: null });
-    // 통로 끝에 한 덩어리를 넣는다 - 넣는 순간이 태그 관리자가 듣는 순간
-    dataLayer.push({
-      // 무슨 일이 일어났나 - 계획서 이름 글자 그대로
-      event: "purchase",
-      // 같이 보내는 상품 값 묶음
-      ecommerce: {
-        // 주문 번호
-        transaction_id: transactionId,
-        // 어느 나라 돈인가
-        currency: "KRW",
-        // 금액 - 주문한 상품 합계 (상품 가격 × 수량의 합, 배송비 없음)
-        value: Cart.total(),
-        // 주문한 상품마다 상자 하나씩 목록에 넣는다 (장바구니 화면처럼 없는 상품은 뺀다)
-        items: Cart.read().filter(i => findProduct(i.id)).map(i => {
-          const p = findProduct(i.id);
-          return { item_id: p.id, item_name: p.name, price: p.price, quantity: i.qty };
-        })
-      }
-    });
+    // 「결제를 마쳤다」(purchase) 는 여기서 보내지 않는다 - 결제가 성공한 뒤 주문 완료 화면(assets/done.js)이 보낸다
 
-    // ▼ 포트원 결제창(테스트) 열기 - 주문 문서·장바구니 비우기·주문 완료 화면 이동은 아직 하지 않는다
-    // 결제 번호 - 주문 번호와 같은 방식 (누른 순간의 시각과 무작위 글자)
+    // ▼ 포트원 결제창(테스트) 열기 - 결제 결과는 주문 완료 화면 한 곳에서만 받는다
+    // 결제 번호 - 누른 순간의 시각(1000분의 1초)과 무작위 글자를 이어 붙인다
     const paymentId = "HARU-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
     // 주문 이름 - 첫 상품 이름 뒤에 「외 N건」 (N 은 나머지 상품 종류 수, 없는 상품은 뺀다)
     const lines = Cart.read().filter(i => findProduct(i.id));
@@ -281,6 +254,9 @@ function paintCheckout() {
     // 받은 글자를 꾸미지 않고 그대로 붙인다
     const show = text => { out.textContent = "paymentId: " + paymentId + "\n" + text; };
 
+    // 주문 완료 화면 주소 - 지금 열린 주소를 기준으로 만들어 http 나 https 로 시작한다
+    const doneUrl = new URL("done.html", location.href).href;
+
     if (!window.PortOne) { show("포트원 SDK 없음"); return; }
     PortOne.requestPayment({
       storeId: "store-521e00f8-15df-4d1e-a374-0482a38b5539",
@@ -289,9 +265,20 @@ function paintCheckout() {
       orderName: orderName,
       totalAmount: Cart.total(),
       currency: "CURRENCY_KRW",
-      payMethod: "CARD"
+      payMethod: "CARD",
+      // 장바구니의 상품 ID 와 수량을 든 그대로 싣는다 (금액은 싣지 않는다)
+      customData: { items: Cart.read().map(i => ({ id: i.id, qty: i.qty })) },
+      // 휴대폰은 결제가 끝나면 이 주소로 넘어온다 (뒤에 paymentId · code · message 가 붙는다)
+      redirectUrl: doneUrl
     })
-      .then(res => show(JSON.stringify(res)))
+      .then(res => {
+        // PC 는 돌려받은 결과를 휴대폰과 같은 모양으로 주문 완료 화면 주소 뒤에 붙여 넘긴다
+        const params = new URLSearchParams();
+        params.set("paymentId", res && res.paymentId ? res.paymentId : paymentId);
+        if (res && res.code != null) params.set("code", res.code);
+        if (res && res.message != null) params.set("message", res.message);
+        location.href = doneUrl + "?" + params.toString();
+      })
       .catch(err => show(String(err)));
   });
 }
