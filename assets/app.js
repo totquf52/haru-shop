@@ -261,8 +261,38 @@ function paintCheckout() {
       }
     });
 
-    Cart.clear();
-    location.href = "done.html";
+    // ▼ 포트원 결제창(테스트) 열기 - 주문 문서·장바구니 비우기·주문 완료 화면 이동은 아직 하지 않는다
+    // 결제 번호 - 주문 번호와 같은 방식 (누른 순간의 시각과 무작위 글자)
+    const paymentId = "HARU-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
+    // 주문 이름 - 첫 상품 이름 뒤에 「외 N건」 (N 은 나머지 상품 종류 수, 없는 상품은 뺀다)
+    const lines = Cart.read().filter(i => findProduct(i.id));
+    const firstName = lines.length ? findProduct(lines[0].id).name : "";
+    const orderName = lines.length > 1 ? `${firstName} 외 ${lines.length - 1}건` : firstName;
+
+    // 결과를 보여 줄 자리 - 결제하기 아래에 한 번만 만든다
+    let out = document.querySelector("#pay-result");
+    if (!out) {
+      out = document.createElement("pre");
+      out.id = "pay-result";
+      out.style.whiteSpace = "pre-wrap";
+      form.after(out);
+    }
+    out.textContent = "paymentId: " + paymentId;
+    // 받은 글자를 꾸미지 않고 그대로 붙인다
+    const show = text => { out.textContent = "paymentId: " + paymentId + "\n" + text; };
+
+    if (!window.PortOne) { show("포트원 SDK 없음"); return; }
+    PortOne.requestPayment({
+      storeId: "store-521e00f8-15df-4d1e-a374-0482a38b5539",
+      channelKey: "channel-key-13abf625-6edb-448b-becf-fab158441ce5",
+      paymentId: paymentId,
+      orderName: orderName,
+      totalAmount: Cart.total(),
+      currency: "CURRENCY_KRW",
+      payMethod: "CARD"
+    })
+      .then(res => show(JSON.stringify(res)))
+      .catch(err => show(String(err)));
   });
 }
 
