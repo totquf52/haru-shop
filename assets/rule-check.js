@@ -133,6 +133,13 @@ async function sendWithPrice(box) {
   say(box, "totalPrice: " + res.data.totalPrice);
 }
 
+/* --- 수량 0으로 묻기 ---
+   calcOrderTotal 에 productId "p1", quantity 0 을 보낸다 */
+async function askZeroQuantity(box) {
+  const res = await calcOrderTotal({ productId: "p1", quantity: 0 });
+  say(box, "totalPrice: " + res.data.totalPrice);
+}
+
 /* --- 화면 열기 --- */
 await auth.authStateReady();
 checking.hidden = true;
@@ -147,6 +154,7 @@ if (auth.currentUser) {
   wire("#btn-price-zero", "#result-price-zero", priceZero);
   wire("#btn-ask-total", "#result-ask-total", askTotal);
   wire("#btn-send-price", "#result-send-price", sendWithPrice);
+  wire("#btn-quantity-zero", "#result-quantity-zero", askZeroQuantity);
 } else {
   loginLine.hidden = false;
 }
