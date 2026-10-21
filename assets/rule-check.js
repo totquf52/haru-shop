@@ -8,6 +8,7 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getFirestore, collection, doc, query, where, limit, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -24,6 +25,8 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 // 누가 로그인했는지 읽는다 (로그인 상태를 지켜보는 일은 auth.js 가 한다)
 const auth = getAuth(app);
+// 서버 함수 calcOrderTotal (us-central1)
+const calcOrderTotal = httpsCallable(getFunctions(app, "us-central1"), "calcOrderTotal");
 
 const checking = document.querySelector("#rule-checking");
 const loginLine = document.querySelector("#rule-login");
@@ -116,6 +119,20 @@ async function priceZero(box) {
   say(box, "허용 · 바꾼 문서 ID: p1 (price → 0)");
 }
 
+/* --- 서버에게 금액 묻기 ---
+   calcOrderTotal 에 productId "p1", quantity 2 를 보낸다 */
+async function askTotal(box) {
+  const res = await calcOrderTotal({ productId: "p1", quantity: 2 });
+  say(box, "totalPrice: " + res.data.totalPrice);
+}
+
+/* --- 가격 바꿔 보내기 ---
+   같은 요청에 price: 100 을 덧붙여 보낸다 */
+async function sendWithPrice(box) {
+  const res = await calcOrderTotal({ productId: "p1", quantity: 2, price: 100 });
+  say(box, "totalPrice: " + res.data.totalPrice);
+}
+
 /* --- 화면 열기 --- */
 await auth.authStateReady();
 checking.hidden = true;
@@ -128,6 +145,8 @@ if (auth.currentUser) {
   wire("#btn-read-all", "#result-read-all", readAllOrders);
   wire("#btn-fix-my-order", "#result-fix-my-order", fixMyOrder);
   wire("#btn-price-zero", "#result-price-zero", priceZero);
+  wire("#btn-ask-total", "#result-ask-total", askTotal);
+  wire("#btn-send-price", "#result-send-price", sendWithPrice);
 } else {
   loginLine.hidden = false;
 }
