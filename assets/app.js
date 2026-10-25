@@ -300,3 +300,11 @@ document.addEventListener("DOMContentLoaded", () => {
   paintCheckout();
   paintProse();
 });
+
+/* --- 웹 푸시 알림 받을 자리 ---
+   맨 위 폴더의 firebase-messaging-sw.js 를 이 가게의 서비스 워커로 등록만 한다
+   (알림 허락 묻기 · 토큰 받기는 아직 하지 않는다) */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    .catch(err => console.log("서비스 워커 등록 실패:", err));
+}
