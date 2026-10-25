@@ -5,6 +5,7 @@
    code 가 있으면 실패나 닫기 - 주문을 만들지 않고 장바구니도 그대로 둔다.
    code 가 없고 paymentId 가 있으면 성공 - 로그인한 사람이면 paymentId 를 문서 ID 로 orders 에 주문 한 장을 쓴다.
    paymentId 도 code 도 없으면 아무것도 하지 않는다. */
+import { showOrderNotifications } from "./order-notifications.js";
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
@@ -87,6 +88,7 @@ async function receive() {
     // 머리글의 장바구니 숫자도 비운 대로 적는다
     document.querySelectorAll(".cart-count").forEach(el => { el.textContent = Cart.count(); });
     showOnly("결제 ID: " + paymentId, true);
+    showOrderNotifications(note, paymentId);
 
     // ▼ 「결제를 마쳤다」(purchase) - 결제가 성공하고 주문 문서를 다 쓴 순간
     // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다

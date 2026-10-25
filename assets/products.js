@@ -3,6 +3,7 @@
    문서 ID 는 shop.js 의 id(p1~p6)와 같다. 긴 설명(detail)과 그림(emoji)은 shop.js 것을 그대로 쓴다.
    화면을 그리는 일은 app.js 의 paintList · paintDetail 이 한다.
    상품 상세의 「바로 주문」도 이 파일이 한다 - 재고 확인 · 재고 차감 · 주문 문서 쓰기를 한 트랜잭션으로 묶는다. */
+import { showOrderNotifications } from "./order-notifications.js";
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, runTransaction, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
@@ -270,6 +271,7 @@ async function orderNow(box, id, note) {
 
     if (left === null) { note.textContent = "재고가 없습니다"; return; }
     note.textContent = "주문했습니다.";
+    showOrderNotifications(note, crypto.randomUUID());
     // 줄어든 재고를 화면에도 적는다
     const stockLine = box.querySelector(".stock");
     if (stockLine) stockLine.textContent = stockText(left);
