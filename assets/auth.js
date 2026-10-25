@@ -172,4 +172,9 @@ onAuthStateChanged(auth, user => {
   paintHeader(user);
   paintMemberOnly(user);
   guardPage(user);
+  if (user && "Notification" in window && Notification.permission === "granted") {
+    import("./push-tokens.js")
+      .then(({ savePushToken }) => savePushToken({ skipRecent: true }))
+      .catch(err => console.error(err?.name || "Error"));
+  }
 });

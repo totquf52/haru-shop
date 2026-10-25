@@ -1,4 +1,4 @@
-// 주문 저장이 성공한 뒤에만 호출한다. 알림 토큰은 요청하지 않는다.
+// 주문 저장이 성공한 뒤에만 호출한다.
 export function showOrderNotifications(anchor, orderId) {
   document.querySelector("#order-notifications")?.remove();
   const panel = document.createElement("section");
@@ -40,6 +40,11 @@ export function showOrderNotifications(anchor, orderId) {
         const result = await request;
         console.log("알림 권한 결과: " + result);
         render(result);
+        if (result === "granted") {
+          import("./push-tokens.js")
+            .then(({ savePushToken }) => savePushToken())
+            .catch(err => console.error(err?.name || "Error"));
+        }
       } catch (err) {
         allow.disabled = false;
         console.error("알림 권한 요청 실패", err);
