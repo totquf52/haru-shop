@@ -8,7 +8,7 @@ import {
   assertSucceeds,
   assertFails,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 
 // 2. 어느 규칙 판으로 돌릴지 고르는 한 줄
 const RULES = "firestore.rules";
@@ -60,4 +60,9 @@ test("손님이 남의 주문을 읽는다", async () => {
 test("직원이 남의 주문을 읽는다", async () => {
   const staff = testEnv.authenticatedContext("staff01", { role: "staff" });
   await assertSucceeds(getDoc(doc(staff.firestore(), "orders/o1")));
+});
+
+test("손님이 남의 주문을 지운다", async () => {
+  const 사람 = testEnv.authenticatedContext("cust01");
+  await assertFails(deleteDoc(doc(사람.firestore(), "orders/o1")));
 });
