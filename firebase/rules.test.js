@@ -11,7 +11,7 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 // 2. 어느 규칙 판으로 돌릴지 고르는 한 줄
-const RULES = "firestore.open.rules";
+const RULES = "firestore.rules";
 
 let testEnv;
 
