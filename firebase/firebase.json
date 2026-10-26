@@ -1,4 +1,9 @@
 {
+  "hosting": {
+    "public": "public",
+    "predeploy": ["node copy-site.mjs"],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  },
   "firestore": {
     "rules": "firestore.rules"
   },
@@ -10,7 +15,21 @@
       "port": 8080
     },
     "ui": {
-      "enabled": false
+      "enabled": true
     }
-  }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
 }
