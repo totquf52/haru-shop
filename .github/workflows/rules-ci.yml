@@ -17,3 +17,24 @@ jobs:
           java-version: 21
       - run: npm ci
       - run: npm test
+
+  deploy-rules:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firebase
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: 키를 임시 파일로
+        env:
+          SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$SA_KEY" > "$RUNNER_TEMP/sa.json"
+      - run: npx firebase deploy --only firestore:rules --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
