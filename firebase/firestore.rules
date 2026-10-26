@@ -1,3 +1,4 @@
+// 이 파일은 main 에 들어오면 GitHub Actions 가 테스트를 거쳐 배포한다 - 콘솔에서 고치지 않는다
 rules_version = '2';
 
 service cloud.firestore {
@@ -30,6 +31,11 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isMine(userId);
+    }
+
+    // 알림 받는 주소 - 문서 ID가 내 UID일 때만 읽고 쓴다
+    match /pushTokens/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
     match /{document=**} {
