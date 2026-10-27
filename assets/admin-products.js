@@ -27,7 +27,7 @@ function uploadPhoto(id, file, note) {
       s => { note.textContent = "올리는 중 … " + (s.totalBytes ? Math.round(s.bytesTransferred / s.totalBytes * 100) : 0) + "%"; },
       err => reject(err),
       async () => {
-        try { await updateDoc(doc(db, "products", id), { imagePath: path }); resolve(path); }
+        try { await updateDoc(doc(db, "products", id), { imagePath: path, updatedAt: serverTimestamp() }); resolve(path); }
         catch (err) { reject(err); }
       });
   });
@@ -73,7 +73,7 @@ function row(id, d) {
   soldBtn.addEventListener("click", async () => {
     note.textContent = "";
     if (!soldOut) {
-      try { await updateDoc(doc(db, "products", id), { stock: 0 }); await loadProducts(); }
+      try { await updateDoc(doc(db, "products", id), { stock: 0, updatedAt: serverTimestamp() }); await loadProducts(); }
       catch (err) { console.error(err); note.textContent = errorText(err); }
       return;
     }
@@ -84,7 +84,7 @@ function row(id, d) {
   const visBtn = toggleBtn(visible);
   visBtn.addEventListener("click", async () => {
     note.textContent = "";
-    try { await updateDoc(doc(db, "products", id), { isVisible: !visible }); await loadProducts(); }
+    try { await updateDoc(doc(db, "products", id), { isVisible: !visible, updatedAt: serverTimestamp() }); await loadProducts(); }
     catch (err) { console.error(err); note.textContent = errorText(err); }
   });
 
@@ -122,7 +122,7 @@ function askStock(tr, id, note) {
   save.addEventListener("click", async () => {
     const n = Number(input.value);
     if (!Number.isInteger(n) || n < 1) { note.textContent = "재고는 1 이상 정수로 넣어 주세요."; return; }
-    try { await updateDoc(doc(db, "products", id), { stock: n }); await loadProducts(); }
+    try { await updateDoc(doc(db, "products", id), { stock: n, updatedAt: serverTimestamp() }); await loadProducts(); }
     catch (err) { console.error(err); note.textContent = errorText(err); }
   });
   td.append("품절을 끕니다. 재고 ", input, save);
@@ -152,7 +152,7 @@ function openEdit(tr, id, d, note) {
     if (file) { const msg = checkFile(file); if (msg) { note.textContent = msg; return; } }
     try {
       // price · stock 은 숫자로 저장한다
-      await updateDoc(doc(db, "products", id), { price: Number(price.value), summary: summary.value, stock: Number(stock.value) });
+      await updateDoc(doc(db, "products", id), { price: Number(price.value), summary: summary.value, stock: Number(stock.value), updatedAt: serverTimestamp() });
       // 사진을 골랐으면 같은 경로에 덮어 올리고, 다 올라간 뒤 imagePath 를 적는다
       if (file) await uploadPhoto(id, file, status);
       await loadProducts();
@@ -186,6 +186,8 @@ function render() {
     return true;
   });
   if (sortBox.value === "stock") list = [...list].sort((a, b) => Number(a.d.stock) - Number(b.d.stock));
+  // 최근에 고친 순 - updatedAt 이 늦은 것이 위, 없는 상품은 맨 아래
+  if (sortBox.value === "recent") list = [...list].sort((a, b) => (b.d.updatedAt ? b.d.updatedAt.toMillis() : -1) - (a.d.updatedAt ? a.d.updatedAt.toMillis() : -1));
   if (sortBox.value === "name") list = [...list].sort((a, b) => String(a.d.name || "").localeCompare(String(b.d.name || ""), "ko"));
   countLine.textContent = "지금 보이는 상품 " + list.length + "개 / 전체 " + all.length + "개";
   filterBtns.forEach(b => b.className = b.dataset.filter === filter ? "btn" : "btn ghost");
@@ -225,7 +227,8 @@ newForm.addEventListener("submit", async e => {
       summary: f.get("summary"),
       stock: Number(f.get("stock")),
       isVisible: false,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
     // 2) 그 문서 ID 로 사진을 올리고 3) 다 올라간 뒤 imagePath 를 적는다
     if (hasFile) {
