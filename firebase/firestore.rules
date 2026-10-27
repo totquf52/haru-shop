@@ -16,11 +16,23 @@ service cloud.firestore {
       return signedIn() && request.auth.token.role in ["staff", "admin"];
     }
 
+    function onlyStockDown() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock'])
+          && request.resource.data.stock < resource.data.stock
+          && request.resource.data.stock >= 0;
+    }
+
+    function validPrice() {
+      return request.resource.data.price is number
+          && request.resource.data.price > 0;
+    }
+
     match /products/{productId} {
       allow read: if true;
-      allow update: if signedIn()
-                    && request.resource.data.price is number
-                    && request.resource.data.price > 0;
+      allow create: if isStaff() && validPrice();
+      allow update: if (isStaff() && validPrice())
+                    || (signedIn() && onlyStockDown());
+      allow delete: if false;
     }
 
     match /orders/{orderId} {
@@ -36,6 +48,11 @@ service cloud.firestore {
     // 알림 받는 주소 - 문서 ID가 내 UID일 때만 읽고 쓴다
     match /pushTokens/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /adminLogs/{logId} {
+      allow read: if isStaff();
+      allow write: if false;
     }
 
     match /{document=**} {
