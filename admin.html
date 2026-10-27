@@ -36,6 +36,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- 관리 화면 입구 - 로그인 토큰의 커스텀 클레임 role 로 판단한다 (assets/admin.js) -->
   <section id="gate" class="pay" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:560px">
     <p id="gate-status" style="margin:0;font-size:17px;font-weight:600">확인하는 중…</p>
+    <div id="gate-who" hidden style="margin:8px 0 0;font-size:14px;color:var(--sub)">
+      <p id="gate-email" style="margin:0"></p>
+      <p id="gate-time" style="margin:0"></p>
+    </div>
     <p id="gate-login" hidden style="margin:10px 0 0"><a href="login.html">로그인 화면으로</a></p>
     <div id="gate-claim" hidden style="margin:12px 0 0">
       <button class="btn" type="button" id="btn-claim">주인 명찰 받기</button>

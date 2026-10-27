@@ -26,6 +26,9 @@ const claimBox = document.querySelector("#gate-claim");
 const errorLine = document.querySelector("#gate-error");
 const claimBtn = document.querySelector("#btn-claim");
 const recheckBtn = document.querySelector("#btn-recheck");
+const whoBox = document.querySelector("#gate-who");
+const whoLine = document.querySelector("#gate-email");
+const timeLine = document.querySelector("#gate-time");
 
 // 오류 글을 줄이지 않고 그대로 적는다 (오류 코드가 글에 없으면 뒤에 붙인다)
 function errorText(err) {
@@ -40,6 +43,7 @@ async function checkGate(force) {
   const user = auth.currentUser;
   loginLine.hidden = true;
   claimBox.hidden = true;
+  whoBox.hidden = true;
 
   if (!user) {
     statusLine.textContent = "로그인이 필요합니다";
@@ -53,6 +57,10 @@ async function checkGate(force) {
 
   if (role === "staff" || role === "admin") {
     statusLine.textContent = "관리자: " + role;
+    // 누구로 들어왔는지 · 지금 토큰을 받은 시각 (서울 시각)
+    whoLine.textContent = "로그인 : " + (user.email || "");
+    timeLine.textContent = "토큰을 받은 시각 : " + new Date(result.issuedAtTime).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+    whoBox.hidden = false;
     return role;
   }
   statusLine.textContent = "권한이 없습니다";
