@@ -156,6 +156,8 @@ async function restore(id, note) {
 
 /* --- 최근 활동 - 함수가 남긴 adminLogs 를 최신 것부터 열 줄 --- */
 const logBox = document.querySelector("#log-rows");
+// 바뀐 필드 이름을 보여 줄 때만 한국어로 - adminLogs 값은 그대로 둔다
+const KO = { deletedAt: "내림 표시", isVisible: "노출", stock: "재고", price: "가격", name: "이름", summary: "설명", imagePath: "사진" };
 async function loadLogs() {
   try {
     const snap = await getDocs(query(collection(db, "adminLogs"), orderBy("at", "desc"), limit(10)));
@@ -163,7 +165,7 @@ async function loadLogs() {
     logBox.replaceChildren(...snap.docs.map(s => {
       const g = s.data();
       const when = g.at ? g.at.toDate().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : "";
-      return el("li", when + "   " + (names[g.productId] || g.productId) + "   " + g.action + "   " + (g.changedKeys || []).join(" · "));
+      return el("li", when + "   " + (names[g.productId] || g.productId) + "   " + g.action + "   " + (g.changedKeys || []).map(k => KO[k] || k).join(" · "));
     }));
     if (!snap.size) logBox.replaceChildren(el("li", "아직 활동이 없습니다"));
   } catch (err) { console.error(err); logBox.replaceChildren(el("li", "최근 활동을 불러오지 못했습니다. " + errorText(err))); }
