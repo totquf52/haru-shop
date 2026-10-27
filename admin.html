@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리 화면 — 하루살림</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="assets/style.css">
+
+<!-- 동의 배너 (태그 관리자보다 먼저) -->
+<script src="assets/consent.js"></script>
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-MQ9XCH2B');</script>
+<!-- End Google Tag Manager -->
+
+</head>
+<body>
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MQ9XCH2B"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<!-- 이 화면은 가게 메뉴·머리글에 넣지 않는다 - 주소를 직접 넣어서 연다 -->
+<main><div class="wrap">
+  <h2>관리 화면</h2>
+
+  <!-- 로그인했는지 확인하는 동안 -->
+  <p id="admin-checking" class="lead">확인하는 중…</p>
+
+  <!-- 로그인하지 않았으면 이 한 줄만 보인다 (assets/admin.js 가 연다) -->
+  <p id="admin-login" hidden>로그인이 필요합니다 <a href="/login.html">로그인하기</a></p>
+
+  <!-- 로그인한 사람에게만 보인다 (assets/admin.js 가 연다) -->
+  <div id="admin-entry" hidden>
+    <!-- role 이 staff · admin 이면 -->
+    <p id="admin-ok" hidden style="font-weight:700"></p>
+
+    <!-- 그 밖이면 -->
+    <div id="admin-denied" hidden>
+      <p>권한이 없습니다</p>
+      <button class="btn" type="button" id="btn-grant">주인 명찰 받기</button>
+    </div>
+
+    <div id="admin-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></div>
+
+    <div style="margin:24px 0 0">
+      <button class="btn ghost" type="button" id="btn-recheck">다시 확인</button>
+    </div>
+  </div>
+</div></main>
+<script type="module" src="assets/admin.js"></script>
+</body>
+</html>
