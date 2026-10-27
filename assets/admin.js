@@ -4,6 +4,7 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js";
+import { showProducts } from "./admin-products.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -61,6 +62,8 @@ async function checkGate(force) {
     whoLine.textContent = "로그인 : " + (user.email || "");
     timeLine.textContent = "토큰을 받은 시각 : " + new Date(result.issuedAtTime).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
     whoBox.hidden = false;
+    // 상품 표는 관리자일 때만
+    showProducts(app);
     return role;
   }
   statusLine.textContent = "권한이 없습니다";

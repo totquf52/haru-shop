@@ -49,6 +49,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="btn ghost" type="button" id="btn-recheck">다시 확인</button>
     </div>
   </section>
+
+  <!-- 상품 표 - 입구가 「관리자: staff · admin」 일 때만 (assets/admin-products.js) -->
+  <section id="products" hidden style="margin:28px 0 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px">
+      <h2 style="margin:0">상품</h2>
+      <button class="btn" type="button" id="btn-new">새 상품</button>
+    </div>
+    <form id="new-form" hidden style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <label>이름 <input name="name" required style="padding:6px 8px"></label>
+      <label>가격 <input name="price" type="number" required style="width:110px;padding:6px 8px"></label>
+      <label>설명 <input name="summary" style="width:260px;padding:6px 8px"></label>
+      <label>재고 <input name="stock" type="number" required style="width:90px;padding:6px 8px"></label>
+      <button class="btn" type="submit" id="new-save">저장</button>
+      <p id="new-result" role="status" style="margin:0;width:100%;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
+    </form>
+    <table class="cart" style="font-size:14px">
+      <thead><tr><th>문서 ID</th><th>이름</th><th>가격</th><th>재고</th><th>품절</th><th>노출</th><th></th></tr></thead>
+      <tbody id="product-rows"></tbody>
+    </table>
+  </section>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
 <script type="module" src="assets/admin.js"></script>
