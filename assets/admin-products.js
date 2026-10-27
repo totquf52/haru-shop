@@ -3,8 +3,35 @@
    products 를 조건 없이 전부 읽는다 - 숨긴 상품(isVisible false)도 보인다.
    품절 토글은 stock, 노출 토글은 isVisible 을 바꾼다. 지우는 버튼은 없다. */
 import { getFirestore, collection, doc, getDocs, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
 let db = null;
+// 버킷은 설정의 storageBucket 값 그대로
+let storage = null;
+const MAX = 5 * 1024 * 1024;
+
+/* --- 사진 ---
+   올리기 전에 크기 · 종류를 본다. 사진이 다 올라간 뒤에만 imagePath 에 경로 글자를 적는다. */
+function checkFile(file) {
+  if (!file.type.startsWith("image/")) return "이미지 파일만 올릴 수 있습니다";
+  if (file.size >= MAX) return "5MB 넘는 사진은 올릴 수 없습니다";
+  return "";
+}
+
+function uploadPhoto(id, file, note) {
+  // 맨 앞에 / 를 붙이지 않는다. 예: products/p1/main.jpg
+  const path = "products/" + id + "/main.jpg";
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(ref(storage, path), file);
+    task.on("state_changed",
+      s => { note.textContent = "올리는 중 … " + (s.totalBytes ? Math.round(s.bytesTransferred / s.totalBytes * 100) : 0) + "%"; },
+      err => reject(err),
+      async () => {
+        try { await updateDoc(doc(db, "products", id), { imagePath: path }); resolve(path); }
+        catch (err) { reject(err); }
+      });
+  });
+}
 const box = document.querySelector("#products");
 const tbody = document.querySelector("#product-rows");
 const newBtn = document.querySelector("#btn-new");
@@ -66,7 +93,16 @@ function row(id, d) {
   editBtn.style.cssText = "padding:5px 12px;font-size:13px";
   editBtn.addEventListener("click", () => openEdit(tr, id, d, note));
 
-  const cells = [el("td", id), el("td", d.name || ""), el("td", Number(d.price).toLocaleString("ko-KR")), el("td", String(stock))];
+  // imagePath 가 있으면 작은 사진
+  const tdName = el("td");
+  if (d.imagePath) {
+    const img = el("img", null, { alt: "" });
+    img.style.cssText = "width:36px;height:36px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:8px";
+    getDownloadURL(ref(storage, d.imagePath)).then(u => { img.src = u; }).catch(err => console.error(err));
+    tdName.appendChild(img);
+  }
+  tdName.append(d.name || "");
+  const cells = [el("td", id), tdName, el("td", Number(d.price).toLocaleString("ko-KR")), el("td", String(stock))];
   const tdSold = el("td"); tdSold.appendChild(soldBtn);
   const tdVis = el("td"); tdVis.appendChild(visBtn);
   const tdEdit = el("td"); tdEdit.append(editBtn, note);
@@ -104,17 +140,25 @@ function openEdit(tr, id, d, note) {
   const stock = el("input", null, { type: "number", value: d.stock, id: "edit-stock" });
   [price, stock].forEach(i => i.style.cssText = "width:110px;padding:6px 8px;margin:0 12px 0 4px");
   summary.style.cssText = "width:280px;padding:6px 8px;margin:0 12px 0 4px";
+  const photo = el("input", null, { type: "file", accept: "image/*", id: "edit-photo" });
+  photo.style.cssText = "margin:0 12px 0 4px";
   const save = el("button", "저장", { type: "button", className: "btn" });
   save.style.cssText = "padding:5px 14px;font-size:13px";
+  const status = el("span", "");
+  status.style.cssText = "margin-left:10px;font-size:13px";
   save.addEventListener("click", async () => {
     note.textContent = "";
+    const file = photo.files[0];
+    if (file) { const msg = checkFile(file); if (msg) { note.textContent = msg; return; } }
     try {
       // price · stock 은 숫자로 저장한다
       await updateDoc(doc(db, "products", id), { price: Number(price.value), summary: summary.value, stock: Number(stock.value) });
+      // 사진을 골랐으면 같은 경로에 덮어 올리고, 다 올라간 뒤 imagePath 를 적는다
+      if (file) await uploadPhoto(id, file, status);
       await loadProducts();
     } catch (err) { console.error(err); note.textContent = errorText(err); }
   });
-  td.append("가격", price, "설명", summary, "재고", stock, save);
+  td.append("가격", price, "설명", summary, "재고", stock, "사진", photo, save, status);
   extra.appendChild(td);
   tr.after(extra);
 }
@@ -141,8 +185,12 @@ newForm.addEventListener("submit", async e => {
   e.preventDefault();
   newNote.textContent = "";
   const f = new FormData(newForm);
+  const file = f.get("photo");
+  const hasFile = file && file.size > 0;
+  if (hasFile) { const msg = checkFile(file); if (msg) { newNote.textContent = msg; return; } }
   try {
-    const ref = await addDoc(collection(db, "products"), {
+    // 1) 숨긴 채로 문서를 먼저 만든다
+    const docRef = await addDoc(collection(db, "products"), {
       name: f.get("name"),
       price: Number(f.get("price")),
       summary: f.get("summary"),
@@ -150,7 +198,12 @@ newForm.addEventListener("submit", async e => {
       isVisible: false,
       createdAt: serverTimestamp()
     });
-    newNote.textContent = "저장했습니다 - 문서 ID " + ref.id;
+    // 2) 그 문서 ID 로 사진을 올리고 3) 다 올라간 뒤 imagePath 를 적는다
+    if (hasFile) {
+      try { await uploadPhoto(docRef.id, file, newNote); }
+      catch (err) { console.error(err); newNote.textContent = "문서 " + docRef.id + " 는 만들었지만 사진을 올리지 못했습니다.\n" + errorText(err); await loadProducts(); return; }
+    }
+    newNote.textContent = "저장했습니다 - 문서 ID " + docRef.id;
     newForm.reset();
     await loadProducts();
   } catch (err) { console.error(err); newNote.textContent = "저장하지 못했습니다.\n" + errorText(err); }
@@ -158,6 +211,7 @@ newForm.addEventListener("submit", async e => {
 
 export async function showProducts(app) {
   db = getFirestore(app);
+  storage = getStorage(app);
   box.hidden = false;
   await loadProducts();
 }
