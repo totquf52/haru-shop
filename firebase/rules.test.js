@@ -65,3 +65,18 @@ test("손님이 남의 주문을 지운다", async () => {
   const 사람 = testEnv.authenticatedContext("cust01");
   await assertFails(deleteDoc(doc(사람.firestore(), "orders/o1")));
 });
+
+// 상품 쓰기 - 손님은 재고 줄이기만
+test("손님이 상품 가격을 1원으로 바꾼다", async () => {
+  const 손님 = testEnv.authenticatedContext("cust01");
+  await assertFails(
+    setDoc(doc(손님.firestore(), "products/p1"), { price: 1 }, { merge: true }),
+  );
+});
+
+test("손님이 주문하며 상품 재고를 하나 줄인다", async () => {
+  const 손님 = testEnv.authenticatedContext("cust01");
+  await assertSucceeds(
+    setDoc(doc(손님.firestore(), "products/p1"), { stock: 9 }, { merge: true }),
+  );
+});
