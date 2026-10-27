@@ -72,6 +72,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <input id="new-summary" type="text">
         <label for="new-stock">stock</label>
         <input id="new-stock" type="number" inputmode="numeric" min="0" step="1">
+        <label for="new-photo">사진</label>
+        <input id="new-photo" type="file" accept="image/*">
         <button class="btn" type="button" id="btn-new-save" style="margin:12px 0 0">저장</button>
       </div>
       <p id="new-product-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
@@ -80,7 +82,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div style="overflow-x:auto;margin:12px 0 0">
         <table class="cart" id="product-table">
           <thead>
-            <tr><th>문서 ID</th><th>name</th><th>price</th><th>stock</th><th>품절</th><th>노출</th><th></th><th></th></tr>
+            <tr><th>사진</th><th>문서 ID</th><th>name</th><th>price</th><th>stock</th><th>품절</th><th>노출</th><th></th><th></th></tr>
           </thead>
           <!-- 상품 한 개마다 <tbody> 한 묶음 (보통 줄 + 고치기 칸) -->
         </table>

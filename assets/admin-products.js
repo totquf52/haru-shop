@@ -6,9 +6,12 @@
    - 노출 = isVisible true / false
    - 고치기 = price · summary · stock (price · stock 은 숫자로 저장)
    - 「새 상품」 = 자동 문서 ID · isVisible false · createdAt 은 서버 시각
+   - 사진 = products/문서 ID/main.jpg 에 고른 파일 그대로 올리고, 다 올라간 뒤에 그 경로 글자를 imagePath 에 적는다
+     (다운로드 URL 은 문서에 적지 않는다 - 표의 작은 사진을 보여 줄 때만 받는다)
    상품을 지우는 단추는 두지 않는다. 저장이 실패하면 오류 글을 줄이지 않고 그 줄 옆에 그대로 적는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -23,6 +26,8 @@ const firebaseConfig = {
 // 화면이 이미 연결해 두었으면 그것을 쓰고, 없을 때만 새로 연결한다
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+// 버킷은 설정의 storageBucket 값 그대로
+const storage = getStorage(app);
 
 const section = document.querySelector("#admin-products");
 const table = document.querySelector("#product-table");
@@ -53,6 +58,60 @@ function toNumber(text) {
   if (!t) return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
+}
+
+/* --- 사진 --- */
+// 올리기 전에 막는다 - 문제가 있으면 보여 줄 글, 없으면 null
+function photoProblem(file) {
+  if (!file.type.startsWith("image/")) return "이미지 파일만 올릴 수 있습니다";
+  if (file.size >= 5 * 1024 * 1024) return "5MB 넘는 사진은 올릴 수 없습니다";
+  return null;
+}
+
+// products/문서 ID/main.jpg 에 고른 파일 그대로 올린다 (같은 경로면 덮어 올린다).
+// 올라가는 동안 onPercent(몇 %) 를 부르고, 다 올라가면 경로 글자를 돌려준다
+function uploadPhoto(id, file, onPercent) {
+  // 맨 앞에 / 를 붙이지 않는다. 예: products/p1/main.jpg
+  const path = "products/" + id + "/main.jpg";
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(ref(storage, path), file);
+    task.on("state_changed",
+      snapshot => {
+        // 진행률 - 올라간 만큼 ÷ 전체
+        onPercent(snapshot.totalBytes ? Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0);
+      },
+      reject,
+      () => resolve(path)
+    );
+  });
+}
+
+// 파일을 고르는 칸 - 고르는 순간에도 막아야 할 파일이면 note 에 적는다
+function photoInput(input, note) {
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    const problem = file && photoProblem(file);
+    if (problem) say(note, problem, true);
+  });
+}
+
+// 표의 작은 사진 - imagePath 가 있을 때만, 그 경로로 다운로드 URL 을 받아 보여 준다
+function thumb(path) {
+  const box = document.createElement("span");
+  if (!path) return box;
+  getDownloadURL(ref(storage, path)).then(url => {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.width = 48;
+    img.height = 48;
+    img.style.cssText = "display:block;object-fit:cover;border-radius:6px";
+    img.src = url;
+    box.replaceChildren(img);
+  }).catch(err => {
+    // 오류 글은 줄이지 않고 콘솔에 그대로 찍는다
+    console.error(err);
+  });
+  return box;
 }
 
 function cell(content) {
@@ -103,7 +162,7 @@ function paintProduct(id, data, message) {
   editBtn.textContent = "고치기";
 
   row.append(
-    cell(id), cell(data.name), cell(data.price), cell(data.stock),
+    cell(thumb(data.imagePath)), cell(id), cell(data.name), cell(data.price), cell(data.stock),
     cell(soldOut.lab), cell(visible.lab), cell(editBtn), cell(note)
   );
 
@@ -150,17 +209,20 @@ function paintProduct(id, data, message) {
   const editRow = document.createElement("tr");
   editRow.hidden = true;
   const editCell = document.createElement("td");
-  editCell.colSpan = 8;
+  editCell.colSpan = 9;
   const form = document.createElement("div");
   form.style.cssText = "display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end";
   const price = field("price", data.price, "number");
   const summary = field("summary", data.summary, "text");
   const stock = field("stock", data.stock, "number");
+  const photo = field("사진", "", "file");
+  photo.input.accept = "image/*";
+  photoInput(photo.input, note);
   const saveBtn = document.createElement("button");
   saveBtn.type = "button";
   saveBtn.className = "btn";
   saveBtn.textContent = "저장";
-  form.append(price.lab, summary.lab, stock.lab, saveBtn);
+  form.append(price.lab, summary.lab, stock.lab, photo.lab, saveBtn);
   editCell.append(form);
   editRow.append(editCell);
 
@@ -172,8 +234,25 @@ function paintProduct(id, data, message) {
     const s = toCount(stock.input.value, 0);
     if (p === null) { say(note, "price 는 숫자로 넣어 주세요: " + price.input.value, true); return; }
     if (s === null) { say(note, "stock 은 0 이상 정수로 넣어 주세요: " + stock.input.value, true); return; }
+    // 사진을 골랐으면 올리기 전에 먼저 본다
+    const file = photo.input.files[0];
+    const problem = file && photoProblem(file);
+    if (problem) { say(note, problem, true); return; }
+
     saveBtn.disabled = true;
-    const ok = await save({ price: p, summary: summary.input.value, stock: s });
+    const changes = { price: p, summary: summary.input.value, stock: s };
+    if (file) {
+      // 같은 경로에 덮어 올리고, 다 올라간 뒤에만 imagePath 를 함께 저장한다
+      // 올리기가 실패하면 아무것도 저장하지 않는다
+      try {
+        changes.imagePath = await uploadPhoto(id, file, percent => say(note, "올리는 중 … " + percent + "%"));
+      } catch (err) {
+        say(note, "사진을 올리지 못했습니다.\n" + errorText(err), true);
+        saveBtn.disabled = false;
+        return;
+      }
+    }
+    const ok = await save(changes);
     if (!ok) saveBtn.disabled = false;
   });
 
@@ -212,7 +291,9 @@ const newName = document.querySelector("#new-name");
 const newPrice = document.querySelector("#new-price");
 const newSummary = document.querySelector("#new-summary");
 const newStock = document.querySelector("#new-stock");
+const newPhoto = document.querySelector("#new-photo");
 const newSave = document.querySelector("#btn-new-save");
+photoInput(newPhoto, newNote);
 
 document.querySelector("#btn-new-product").addEventListener("click", () => {
   newBox.hidden = !newBox.hidden;
@@ -225,12 +306,16 @@ newSave.addEventListener("click", async () => {
   const stock = toCount(newStock.value, 0);
   if (price === null) { say(newNote, "price 는 숫자로 넣어 주세요: " + newPrice.value, true); return; }
   if (stock === null) { say(newNote, "stock 은 0 이상 정수로 넣어 주세요: " + newStock.value, true); return; }
+  // 사진을 골랐으면 문서를 만들기 전에 먼저 본다
+  const file = newPhoto.files[0];
+  const problem = file && photoProblem(file);
+  if (problem) { say(newNote, problem, true); return; }
 
   newSave.disabled = true;
   say(newNote, "저장하는 중…");
   try {
-    // 문서 ID 는 자동으로 붙인다
-    const ref = await addDoc(collection(db, "products"), {
+    // 1) 문서 ID 는 자동으로 붙인다
+    const docRef = await addDoc(collection(db, "products"), {
       name: newName.value,
       price,
       summary: newSummary.value,
@@ -240,8 +325,27 @@ newSave.addEventListener("click", async () => {
       // 만든 시각 - 서버 시계로 적는다
       createdAt: serverTimestamp()
     });
-    say(newNote, "만들었습니다. 문서 ID: " + ref.id);
-    [newName, newPrice, newSummary, newStock].forEach(el => { el.value = ""; });
+    let done = "만들었습니다. 문서 ID: " + docRef.id;
+
+    if (file) {
+      // 2) 그 문서 ID 로 products/문서 ID/main.jpg 에 올린다
+      let path;
+      try {
+        path = await uploadPhoto(docRef.id, file, percent => say(newNote, "올리는 중 … " + percent + "%"));
+      } catch (err) {
+        // 올리기가 실패하면 imagePath 는 적지 않는다
+        say(newNote, "문서는 만들었지만(문서 ID: " + docRef.id + ") 사진을 올리지 못했습니다.\n" + errorText(err), true);
+        newSave.disabled = false;
+        await loadProducts();
+        return;
+      }
+      // 3) 다 올라간 뒤에 imagePath 에 경로 글자를 적는다
+      await updateDoc(docRef, { imagePath: path });
+      done += " · 사진: " + path;
+    }
+
+    say(newNote, done);
+    [newName, newPrice, newSummary, newStock, newPhoto].forEach(el => { el.value = ""; });
     newBox.hidden = true;
     // 새 상품이 보이게 표를 다시 읽는다
     await loadProducts();
