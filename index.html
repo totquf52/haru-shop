@@ -51,6 +51,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   <!-- 이 화면을 그리려고 Firestore 에서 읽은 문서 수 (assets/products.js 가 적는다) -->
   <p id="read-count" style="margin:20px 0 0;font-size:13px;color:var(--sub)"></p>
+  <!-- 로그인한 사람에게만 보인다 (assets/auth.js 가 연다) -->
+  <div data-auth-only hidden style="margin:20px 0 0">
+    <button class="btn" type="button" id="btn-seed">상품 올리기</button>
+    <p id="seed-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
+  </div>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
 <script src="assets/shop.js"></script>
