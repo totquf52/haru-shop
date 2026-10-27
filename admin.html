@@ -39,7 +39,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- 로그인한 사람에게만 보인다 (assets/admin.js 가 연다) -->
   <div id="admin-entry" hidden>
     <!-- role 이 staff · admin 이면 -->
-    <p id="admin-ok" hidden style="font-weight:700"></p>
+    <div id="admin-ok-box" hidden>
+      <p id="admin-ok" style="font-weight:700;margin:0 0 4px"></p>
+      <p style="margin:0 0 4px">로그인 : <span id="admin-email" data-clarity-mask="true"></span></p>
+      <p style="margin:0">토큰을 받은 시각 : <span id="admin-issued"></span></p>
+    </div>
 
     <!-- 그 밖이면 -->
     <div id="admin-denied" hidden>

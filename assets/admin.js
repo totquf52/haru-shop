@@ -28,7 +28,10 @@ const grantOwnerRole = httpsCallable(getFunctions(app, "us-central1"), "grantOwn
 const checking = document.querySelector("#admin-checking");
 const loginLine = document.querySelector("#admin-login");
 const entry = document.querySelector("#admin-entry");
+const okBox = document.querySelector("#admin-ok-box");
 const okLine = document.querySelector("#admin-ok");
+const emailLine = document.querySelector("#admin-email");
+const issuedLine = document.querySelector("#admin-issued");
 const denied = document.querySelector("#admin-denied");
 const result = document.querySelector("#admin-result");
 const grantBtn = document.querySelector("#btn-grant");
@@ -64,7 +67,12 @@ async function judge(user, refresh) {
   const role = token.claims.role;
   const allowed = ADMIN_ROLES.includes(role);
   okLine.textContent = allowed ? "관리자: " + role : "";
-  okLine.hidden = !allowed;
+  // 로그인한 이메일과 이 토큰을 받은 시각(issuedAtTime)을 서울 시각으로
+  emailLine.textContent = allowed ? user.email || "" : "";
+  issuedLine.textContent = allowed
+    ? new Date(token.issuedAtTime).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
+    : "";
+  okBox.hidden = !allowed;
   denied.hidden = allowed;
 }
 
