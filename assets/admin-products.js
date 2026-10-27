@@ -2,7 +2,7 @@
    입구가 「관리자: staff · admin」 일 때만 보인다.
    products 를 조건 없이 전부 읽는다 - 숨긴 상품(isVisible false)도 보인다.
    품절 토글은 stock, 노출 토글은 isVisible 을 바꾼다. 지우는 버튼은 없다. */
-import { getFirestore, collection, doc, getDocs, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, updateDoc, addDoc, serverTimestamp, deleteField, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
 let db = null;
@@ -105,9 +105,68 @@ function row(id, d) {
   const cells = [el("td", id), tdName, el("td", Number(d.price).toLocaleString("ko-KR")), el("td", String(stock))];
   const tdSold = el("td"); tdSold.appendChild(soldBtn);
   const tdVis = el("td"); tdVis.appendChild(visBtn);
-  const tdEdit = el("td"); tdEdit.append(editBtn, note);
+  // 내리기 / 되돌리기 - 문서는 지우지 않는다 (소프트 삭제)
+  const downBtn = el("button", d.deletedAt ? "되돌리기" : "내리기", { type: "button", className: "btn ghost" });
+  downBtn.style.cssText = "padding:5px 12px;font-size:13px;margin-left:6px";
+  downBtn.addEventListener("click", () => d.deletedAt ? restore(id, note) : confirmDown(id, d.name || id, note));
+  const tdEdit = el("td"); tdEdit.append(editBtn, downBtn, note);
   tr.append(...cells, tdSold, tdVis, tdEdit);
   return tr;
+}
+
+/* --- 내리기 · 되돌리기 ---
+   확인 창은 무엇을 하는지 상품 이름으로 묻는다. 로그(adminLogs)는 함수가 쓴다 - 화면은 읽기만 한다. */
+const dialog = document.querySelector("#down-dialog");
+const dialogText = document.querySelector("#down-text");
+const undoBar = document.querySelector("#undo-bar");
+const undoText = document.querySelector("#undo-text");
+const undoBtn = document.querySelector("#btn-undo");
+let pending = null;
+
+function confirmDown(id, name, note) {
+  pending = { id, note };
+  dialogText.textContent = "『" + name + "』을 가게에서 내립니다";
+  dialog.hidden = false;
+}
+document.querySelector("#down-cancel").addEventListener("click", () => { dialog.hidden = true; pending = null; });
+document.querySelector("#down-ok").addEventListener("click", async () => {
+  dialog.hidden = true;
+  if (!pending) return;
+  const { id, note } = pending;
+  pending = null;
+  try {
+    // 지우지 않고 표시만 - 내린 시각(서버 시각) · 손님 목록에서 숨김
+    await updateDoc(doc(db, "products", id), { deletedAt: serverTimestamp(), isVisible: false });
+    const name = (all.find(p => p.id === id) || { d: {} }).d.name || id;
+    undoText.textContent = "『" + name + "』을 내렸습니다.";
+    undoBtn.onclick = () => restore(id, note);
+    undoBar.hidden = false;
+    await loadProducts();
+  } catch (err) { console.error(err); note.textContent = errorText(err); }
+});
+
+async function restore(id, note) {
+  try {
+    // deletedAt 필드를 아예 지우고 다시 보이게
+    await updateDoc(doc(db, "products", id), { deletedAt: deleteField(), isVisible: true });
+    undoBar.hidden = true;
+    await loadProducts();
+  } catch (err) { console.error(err); note.textContent = errorText(err); }
+}
+
+/* --- 최근 활동 - 함수가 남긴 adminLogs 를 최신 것부터 열 줄 --- */
+const logBox = document.querySelector("#log-rows");
+async function loadLogs() {
+  try {
+    const snap = await getDocs(query(collection(db, "adminLogs"), orderBy("at", "desc"), limit(10)));
+    const names = Object.fromEntries(all.map(p => [p.id, p.d.name]));
+    logBox.replaceChildren(...snap.docs.map(s => {
+      const g = s.data();
+      const when = g.at ? g.at.toDate().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : "";
+      return el("li", when + "   " + (names[g.productId] || g.productId) + "   " + g.action + "   " + (g.changedKeys || []).join(" · "));
+    }));
+    if (!snap.size) logBox.replaceChildren(el("li", "아직 활동이 없습니다"));
+  } catch (err) { console.error(err); logBox.replaceChildren(el("li", "최근 활동을 불러오지 못했습니다. " + errorText(err))); }
 }
 
 // 품절을 끌 때 - 줄 아래에 재고 칸을 연다
@@ -182,6 +241,7 @@ function render() {
   let list = all.filter(p => {
     if (filter === "soldout" && Number(p.d.stock) !== 0) return false;
     if (filter === "hidden" && p.d.isVisible !== false) return false;
+    if (filter === "down" && !p.d.deletedAt) return false;
     if (q && !String(p.d.name || "").toLowerCase().includes(q)) return false;
     return true;
   });
@@ -204,6 +264,7 @@ export async function loadProducts() {
     const snap = await getDocs(collection(db, "products"));
     all = snap.docs.map(s => ({ id: s.id, d: s.data() }));
     render();
+    await loadLogs();
   } catch (err) {
     console.error(err);
     tbody.replaceChildren(el("tr", null)); tbody.firstChild.appendChild(el("td", "상품을 불러오지 못했습니다. " + errorText(err)));

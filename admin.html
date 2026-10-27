@@ -71,6 +71,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="btn" type="button" data-filter="all" style="padding:7px 14px;font-size:13.5px">전체</button>
       <button class="btn ghost" type="button" data-filter="soldout" style="padding:7px 14px;font-size:13.5px">품절만</button>
       <button class="btn ghost" type="button" data-filter="hidden" style="padding:7px 14px;font-size:13.5px">숨김만</button>
+      <button class="btn ghost" type="button" data-filter="down" style="padding:7px 14px;font-size:13.5px">내린 상품</button>
       <label style="margin-left:12px">검색 <input id="search" type="search" style="padding:6px 8px;width:160px"></label>
       <label style="margin-left:12px">정렬 <select id="sort" style="padding:6px 8px"><option value="">기본</option><option value="stock">재고 적은 순</option><option value="name">이름순</option><option value="recent">최근에 고친 순</option></select></label>
     </div>
@@ -79,7 +80,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <thead><tr><th>문서 ID</th><th>이름</th><th>가격</th><th>재고</th><th>품절</th><th>노출</th><th></th></tr></thead>
       <tbody id="product-rows"></tbody>
     </table>
+    <!-- 내린 뒤 - 되돌리기 한 줄 -->
+    <p id="undo-bar" hidden style="margin:12px 0 0;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;font-size:14px">
+      <span id="undo-text"></span>
+      <button class="btn ghost" type="button" id="btn-undo" style="padding:5px 12px;font-size:13px;margin-left:8px">되돌리기</button>
+    </p>
+    <!-- 최근 활동 - 함수가 남긴 adminLogs (읽기만) -->
+    <h2 style="margin:32px 0 10px">최근 활동</h2>
+    <ul id="log-rows" style="margin:0;padding:14px 18px 14px 34px;background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:14px;line-height:2;white-space:pre"></ul>
   </section>
+
+  <!-- 확인 창 - 무엇을 하는지 이름으로 묻는다 -->
+  <div id="down-dialog" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:50">
+    <div role="dialog" aria-modal="true" style="background:#fff;border-radius:12px;padding:24px 26px;min-width:340px">
+      <p id="down-text" style="margin:0 0 18px;font-size:16px;font-weight:600"></p>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn ghost" type="button" id="down-cancel">그만두기</button>
+        <button class="btn" type="button" id="down-ok">내리기</button>
+      </div>
+    </div>
+  </div>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
 <script type="module" src="assets/admin.js"></script>
