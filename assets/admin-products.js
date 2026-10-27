@@ -168,11 +168,40 @@ function closeExtra(tr) {
   if (next && next.classList.contains("extra")) next.remove();
 }
 
+/* --- 필터 · 검색 · 정렬 ---
+   Firestore 에는 한 번만 묻는다. 고르고 줄 세우는 일은 한 번 읽어 둔 목록에서 화면이 한다. */
+let all = [];
+let filter = "all";
+const filterBtns = document.querySelectorAll("[data-filter]");
+const searchBox = document.querySelector("#search");
+const sortBox = document.querySelector("#sort");
+const countLine = document.querySelector("#count-line");
+
+function render() {
+  const q = (searchBox.value || "").trim().toLowerCase();
+  let list = all.filter(p => {
+    if (filter === "soldout" && Number(p.d.stock) !== 0) return false;
+    if (filter === "hidden" && p.d.isVisible !== false) return false;
+    if (q && !String(p.d.name || "").toLowerCase().includes(q)) return false;
+    return true;
+  });
+  if (sortBox.value === "stock") list = [...list].sort((a, b) => Number(a.d.stock) - Number(b.d.stock));
+  if (sortBox.value === "name") list = [...list].sort((a, b) => String(a.d.name || "").localeCompare(String(b.d.name || ""), "ko"));
+  countLine.textContent = "지금 보이는 상품 " + list.length + "개 / 전체 " + all.length + "개";
+  filterBtns.forEach(b => b.className = b.dataset.filter === filter ? "btn" : "btn ghost");
+  tbody.replaceChildren(...list.map(p => row(p.id, p.d)));
+}
+
+filterBtns.forEach(b => b.addEventListener("click", () => { filter = b.dataset.filter; render(); }));
+searchBox.addEventListener("input", render);
+sortBox.addEventListener("change", render);
+
 /* --- 표 읽기 - 조건 없이 전부 --- */
 export async function loadProducts() {
   try {
     const snap = await getDocs(collection(db, "products"));
-    tbody.replaceChildren(...snap.docs.map(s => row(s.id, s.data())));
+    all = snap.docs.map(s => ({ id: s.id, d: s.data() }));
+    render();
   } catch (err) {
     console.error(err);
     tbody.replaceChildren(el("tr", null)); tbody.firstChild.appendChild(el("td", "상품을 불러오지 못했습니다. " + errorText(err)));

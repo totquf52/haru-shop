@@ -66,6 +66,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="btn" type="submit" id="new-save">저장</button>
       <p id="new-result" role="status" style="margin:0;width:100%;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
     </form>
+    <!-- 필터 · 검색 · 정렬 - 한 번 읽어 둔 목록에서 화면이 고른다 -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">
+      <button class="btn" type="button" data-filter="all" style="padding:7px 14px;font-size:13.5px">전체</button>
+      <button class="btn ghost" type="button" data-filter="soldout" style="padding:7px 14px;font-size:13.5px">품절만</button>
+      <button class="btn ghost" type="button" data-filter="hidden" style="padding:7px 14px;font-size:13.5px">숨김만</button>
+      <label style="margin-left:12px">검색 <input id="search" type="search" style="padding:6px 8px;width:160px"></label>
+      <label style="margin-left:12px">정렬 <select id="sort" style="padding:6px 8px"><option value="">기본</option><option value="stock">재고 적은 순</option><option value="name">이름순</option></select></label>
+    </div>
+    <p id="count-line" style="margin:0 0 10px;font-size:13.5px;color:var(--sub)"></p>
     <table class="cart" style="font-size:14px">
       <thead><tr><th>문서 ID</th><th>이름</th><th>가격</th><th>재고</th><th>품절</th><th>노출</th><th></th></tr></thead>
       <tbody id="product-rows"></tbody>
