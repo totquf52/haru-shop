@@ -8,6 +8,8 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, getIdTokenResult } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js";
+// 상품 표 - 입구가 관리자일 때만 연다
+import { showProducts } from "./admin-products.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -58,6 +60,7 @@ async function judge(user, refresh) {
   if (!user) {
     loginLine.hidden = false;
     entry.hidden = true;
+    showProducts(false);
     return;
   }
   loginLine.hidden = true;
@@ -74,6 +77,7 @@ async function judge(user, refresh) {
     : "";
   okBox.hidden = !allowed;
   denied.hidden = allowed;
+  await showProducts(allowed);
 }
 
 // 버튼을 누르는 동안 막아 두고, 성공이든 실패든 끝나면 다시 연다

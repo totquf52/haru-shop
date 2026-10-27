@@ -56,6 +56,36 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div style="margin:24px 0 0">
       <button class="btn ghost" type="button" id="btn-recheck">다시 확인</button>
     </div>
+
+    <!-- 상품 표 - 입구가 「관리자: staff · admin」 일 때만 보인다 (assets/admin-products.js 가 연다) -->
+    <section id="admin-products" hidden style="margin:36px 0 0">
+      <h3>상품</h3>
+
+      <button class="btn" type="button" id="btn-new-product">새 상품</button>
+      <!-- 위 단추를 누르면 열린다 -->
+      <div id="new-product-box" hidden style="margin:12px 0 0;max-width:420px">
+        <label for="new-name">name</label>
+        <input id="new-name" type="text">
+        <label for="new-price">price</label>
+        <input id="new-price" type="number" inputmode="numeric">
+        <label for="new-summary">summary</label>
+        <input id="new-summary" type="text">
+        <label for="new-stock">stock</label>
+        <input id="new-stock" type="number" inputmode="numeric" min="0" step="1">
+        <button class="btn" type="button" id="btn-new-save" style="margin:12px 0 0">저장</button>
+      </div>
+      <p id="new-product-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
+
+      <p id="product-list-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
+      <div style="overflow-x:auto;margin:12px 0 0">
+        <table class="cart" id="product-table">
+          <thead>
+            <tr><th>문서 ID</th><th>name</th><th>price</th><th>stock</th><th>품절</th><th>노출</th><th></th><th></th></tr>
+          </thead>
+          <!-- 상품 한 개마다 <tbody> 한 묶음 (보통 줄 + 고치기 칸) -->
+        </table>
+      </div>
+    </section>
   </div>
 </div></main>
 <script type="module" src="assets/admin.js"></script>

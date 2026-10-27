@@ -5,7 +5,7 @@
    상품 상세의 「바로 주문」도 이 파일이 한다 - 재고 확인 · 재고 차감 · 주문 문서 쓰기를 한 트랜잭션으로 묶는다. */
 import { showOrderNotifications } from "./order-notifications.js";
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, getDoc, writeBatch, runTransaction, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, runTransaction, serverTimestamp, query, where, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
@@ -26,15 +26,6 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 // 상품 사진이 있는 버킷 - 설정의 storageBucket 값 그대로
 const storage = getStorage(app);
-
-// 「상품 올리기」가 올리는 다섯 장 - 재고와 보이기 값 (이름 · 가격 · 한 줄 소개는 shop.js 에서 읽는다)
-const SEED = [
-  { id: "p2", stock: 30, isVisible: true },
-  { id: "p3", stock: 8, isVisible: true },
-  { id: "p4", stock: 0, isVisible: true },
-  { id: "p5", stock: 5, isVisible: false },
-  { id: "p6", stock: 40, isVisible: true }
-];
 
 // Firestore 문서 한 장에 shop.js 의 그림과 긴 설명을 붙인다
 function toProduct(snap) {
@@ -281,42 +272,6 @@ async function orderNow(box, id, note) {
     note.textContent = "주문하지 못했습니다.\n" + errorText(err);
   }
 }
-
-/* --- 상품 올리기 ---
-   shop.js 의 p2~p6 을 한 묶음(batch)으로 올린다 - 다섯 장이 다 올라가거나 하나도 안 올라간다.
-   p1 은 묶음에 넣지 않는다. */
-async function seedProducts(btn, note) {
-  btn.disabled = true;
-  note.textContent = "올리는 중…";
-  try {
-    const batch = writeBatch(db);
-    SEED.forEach(s => {
-      const p = findProduct(s.id);
-      batch.set(doc(db, "products", s.id), {
-        name: p.name,
-        price: p.price,
-        summary: p.summary,
-        stock: s.stock,
-        isVisible: s.isVisible,
-        // 올린 시각 - 서버 시계로 적는다
-        createdAt: serverTimestamp()
-      });
-    });
-    await batch.commit();
-    note.textContent = "상품 " + SEED.length + "장을 올렸습니다 (" + SEED.map(s => s.id).join(" · ") + ").";
-  } catch (err) {
-    note.textContent = "올리지 못했습니다. 한 장도 올라가지 않았습니다.\n" + errorText(err);
-    btn.disabled = false;
-    return;
-  }
-  btn.disabled = false;
-  // 올라간 상품이 보이게 목록을 다시 읽는다
-  await loadList();
-}
-
-const seedBtn = document.querySelector("#btn-seed");
-const seedNote = document.querySelector("#seed-result");
-if (seedBtn && seedNote) seedBtn.addEventListener("click", () => seedProducts(seedBtn, seedNote));
 
 const moreBtn = document.querySelector("#btn-more");
 if (moreBtn) moreBtn.addEventListener("click", async () => {
