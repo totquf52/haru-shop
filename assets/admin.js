@@ -12,6 +12,8 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { showProducts } from "./admin-products.js";
 // 주문 탭 - 입구가 관리자일 때만 연다
 import { showOrders } from "./admin-orders.js";
+// 매출 탭 - 입구가 관리자일 때만 연다
+import { showSales } from "./admin-sales.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -65,6 +67,7 @@ async function judge(user, refresh) {
     tabs.style.display = "none";
     showProducts(false);
     showOrders(false);
+    showSales(false);
     return;
   }
   loginLine.hidden = true;
@@ -83,12 +86,12 @@ async function judge(user, refresh) {
   denied.hidden = allowed;
   // 탭 줄은 display 가 flex 라 hidden 만으로는 안 숨는다 - 직접 끈다
   tabs.style.display = allowed ? "flex" : "none";
-  await Promise.all([showProducts(allowed), showOrders(allowed)]);
+  await Promise.all([showProducts(allowed), showOrders(allowed), showSales(allowed)]);
 }
 
 // 탭 - 「상품」 · 「주문」 을 눌러 오간다
 const tabs = document.querySelector("#admin-tabs");
-const panels = { products: document.querySelector("#tab-products"), orders: document.querySelector("#tab-orders") };
+const panels = { products: document.querySelector("#tab-products"), orders: document.querySelector("#tab-orders"), sales: document.querySelector("#tab-sales") };
 tabs.querySelectorAll("[data-tab]").forEach(btn => btn.addEventListener("click", () => {
   tabs.querySelectorAll("[data-tab]").forEach(b => {
     const on = b === btn;

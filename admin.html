@@ -61,6 +61,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="admin-tabs" role="tablist" style="display:none;gap:8px;margin:36px 0 0">
       <button class="btn" type="button" role="tab" data-tab="products" aria-selected="true">상품</button>
       <button class="btn ghost" type="button" role="tab" data-tab="orders" aria-selected="false">주문</button>
+      <button class="btn ghost" type="button" role="tab" data-tab="sales" aria-selected="false">매출</button>
     </div>
 
     <div id="tab-products">
@@ -150,6 +151,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </section>
     </div>
 
+    <!-- 매출 탭 (assets/admin-sales.js 가 채운다) - 집계 문서 dailyStats 만 읽는다 -->
+    <div id="tab-sales" hidden>
+    <section style="margin:24px 0 0">
+      <h3>매출</h3>
+      <p id="sales-headline" style="margin:0 0 8px;font-weight:700;overflow-wrap:anywhere"></p>
+      <p id="sales-result" role="status" aria-live="polite" style="margin:0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
+      <div style="max-width:720px;margin:12px 0 0"><canvas id="sales-chart" height="300"></canvas></div>
+      <p id="sales-missing" style="margin:8px 0 0;font-size:14px"></p>
+      <div style="overflow-x:auto;margin:16px 0 0">
+        <table class="cart" id="sales-table">
+          <thead>
+            <tr><th>날짜</th><th>건수</th><th>매출</th><th>센 시각</th><th id="sales-canceled-head" hidden>취소</th></tr>
+          </thead>
+          <tbody id="sales-rows"></tbody>
+        </table>
+      </div>
+    </section>
+    </div>
+
     <!-- 주문 탭 (assets/admin-orders.js 가 채운다) -->
     <div id="tab-orders" hidden>
     <section id="admin-orders" style="margin:24px 0 0">
@@ -197,6 +217,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 </div></main>
+<!-- 매출 차트 도구 Chart.js - 판 번호를 고정한 주소로 불러온다 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script type="module" src="assets/admin.js"></script>
 </body>
 </html>
