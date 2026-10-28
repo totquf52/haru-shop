@@ -10,7 +10,7 @@
      (다운로드 URL 은 문서에 적지 않는다 - 표의 작은 사진을 보여 줄 때만 받는다)
    상품을 지우는 단추는 두지 않는다. 저장이 실패하면 오류 글을 줄이지 않고 그 줄 옆에 그대로 적는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp, deleteField, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
 // index.html 과 같은 Firebase 설정
@@ -161,10 +161,32 @@ function paintProduct(id, data, message) {
   editBtn.className = "btn ghost";
   editBtn.textContent = "고치기";
 
+  // 「내린 상품」 필터에서는 「되돌리기」, 그 밖에서는 「내리기」
+  const restoring = view.filter === "removed";
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn ghost";
+  removeBtn.textContent = restoring ? "되돌리기" : "내리기";
+
   row.append(
     cell(thumb(data.imagePath)), cell(id), cell(data.name), cell(data.price), cell(data.stock),
-    cell(soldOut.lab), cell(visible.lab), cell(editBtn), cell(note)
+    cell(soldOut.lab), cell(visible.lab), cell(editBtn), cell(removeBtn), cell(note)
   );
+
+  removeBtn.addEventListener("click", async () => {
+    if (!restoring && !(await confirmRemove(data.name))) return;
+    removeBtn.disabled = true;
+    say(note, "저장하는 중…");
+    try {
+      await setRemoved(id, !restoring);
+    } catch (err) {
+      say(note, "저장하지 못했습니다.\n" + errorText(err), true);
+      removeBtn.disabled = false;
+      return;
+    }
+    group.replaceWith(paintProduct(id, products.find(p => p.id === id).data, restoring ? "되돌렸습니다." : "내렸습니다."));
+    if (!restoring) showUndo(id, data.name);
+  });
 
   // 저장한다. 실패하면 오류 글을 그 줄 옆에 적고 false 를 돌려준다
   async function save(changes) {
@@ -214,7 +236,7 @@ function paintProduct(id, data, message) {
   const editRow = document.createElement("tr");
   editRow.hidden = true;
   const editCell = document.createElement("td");
-  editCell.colSpan = 9;
+  editCell.colSpan = 10;
   const form = document.createElement("div");
   form.style.cssText = "display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end";
   const price = field("price", data.price, "number");
@@ -286,7 +308,8 @@ function remember(id, data) {
 const FILTERS = {
   all: () => true,
   soldout: d => d.stock === 0,
-  hidden: d => d.isVisible === false
+  hidden: d => d.isVisible === false,
+  removed: d => d.deletedAt != null
 };
 
 const SORTS = {
@@ -318,6 +341,95 @@ function render() {
   countLine.textContent = "지금 보이는 상품 " + shown.length + "개 / 전체 " + products.length + "개";
 }
 
+/* --- 내리기 · 되돌리기 ---
+   문서를 지우지 않는다. 내리기 = deletedAt 에 서버 시각 + isVisible false,
+   되돌리기 = deletedAt 필드를 아예 지우고 isVisible true. 다른 저장과 같이 updatedAt 도 서버 시각으로 적는다. */
+async function setRemoved(id, removed) {
+  await updateDoc(doc(db, "products", id), {
+    deletedAt: removed ? serverTimestamp() : deleteField(),
+    isVisible: !removed,
+    updatedAt: serverTimestamp()
+  });
+  // 읽어 둔 목록에도 적는다 - 시각은 화면 필터 · 정렬에만 쓰는 지금 시각 (문서에는 서버 시각이 적힌다)
+  const item = products.find(p => p.id === id);
+  if (!item) return;
+  const next = { ...item.data, isVisible: !removed, updatedAt: Timestamp.now() };
+  if (removed) next.deletedAt = Timestamp.now();
+  else delete next.deletedAt;
+  item.data = next;
+}
+
+// 확인 창 - 「내리기」 를 누르면 true, 「그만두기」 나 Esc 면 false
+const removeDialog = document.querySelector("#remove-dialog");
+function confirmRemove(name) {
+  document.querySelector("#remove-text").textContent = "『" + (name ?? "") + "』을 가게에서 내립니다";
+  removeDialog.returnValue = "";
+  removeDialog.showModal();
+  return new Promise(resolve => {
+    removeDialog.addEventListener("close", () => resolve(removeDialog.returnValue === "remove"), { once: true });
+  });
+}
+
+// 내린 뒤 화면 아래 한 줄 안내 - 「되돌리기」 를 누르면 방금 내린 상품을 되돌린다
+const undoBar = document.querySelector("#undo-bar");
+const undoText = document.querySelector("#undo-text");
+const undoBtn = document.querySelector("#btn-undo");
+let undoId = null;
+
+function showUndo(id, name) {
+  undoId = id;
+  undoText.textContent = "『" + (name ?? "") + "』을 내렸습니다.";
+  undoBtn.hidden = false;
+  undoBtn.disabled = false;
+  undoBar.hidden = false;
+}
+
+undoBtn.addEventListener("click", async () => {
+  if (!undoId) return;
+  undoBtn.disabled = true;
+  try {
+    await setRemoved(undoId, false);
+  } catch (err) {
+    undoText.textContent = "되돌리지 못했습니다.\n" + errorText(err);
+    undoBtn.disabled = false;
+    return;
+  }
+  undoId = null;
+  undoText.textContent = "되돌렸습니다.";
+  undoBtn.hidden = true;
+  render();
+});
+
+/* --- 최근 활동 ---
+   함수가 adminLogs 에 남긴 것을 at 이 최신인 것부터 열 줄 읽는다 (관리 화면은 adminLogs 에 쓰지 않는다).
+   상품 이름은 이미 읽어 둔 products 에서 productId 로 찾는다. */
+const logRows = document.querySelector("#log-rows");
+const logNote = document.querySelector("#log-result");
+
+async function loadLogs() {
+  logRows.replaceChildren();
+  say(logNote, "최근 활동을 읽는 중…");
+  try {
+    const snap = await getDocs(query(collection(db, "adminLogs"), orderBy("at", "desc"), limit(10)));
+    snap.docs.forEach(d => {
+      const log = d.data();
+      const item = products.find(p => p.id === log.productId);
+      const tr = document.createElement("tr");
+      tr.append(
+        cell(log.at instanceof Timestamp ? log.at.toDate().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : ""),
+        // 찾지 못하면 productId 를 그대로 적는다
+        cell(item ? item.data.name : log.productId),
+        cell(log.action),
+        cell(Array.isArray(log.changedKeys) ? log.changedKeys.join(", ") : log.changedKeys)
+      );
+      logRows.append(tr);
+    });
+    say(logNote, snap.size ? "" : "아직 활동이 없습니다.");
+  } catch (err) {
+    say(logNote, "최근 활동을 읽지 못했습니다.\n" + errorText(err), true);
+  }
+}
+
 async function loadProducts() {
   table.querySelectorAll("tbody").forEach(el => el.remove());
   countLine.textContent = "";
@@ -332,6 +444,8 @@ async function loadProducts() {
     products = [];
     say(listNote, "상품을 읽지 못했습니다.\n" + errorText(err), true);
   }
+  // 상품 이름을 찾을 수 있게 상품을 읽은 뒤에 읽는다
+  await loadLogs();
 }
 
 filterBtns.forEach(btn => btn.addEventListener("click", () => {
@@ -352,6 +466,8 @@ export async function showProducts(show) {
   section.hidden = !show;
   if (!show) {
     table.querySelectorAll("tbody").forEach(el => el.remove());
+    logRows.replaceChildren();
+    undoBar.hidden = true;
     products = [];
     return;
   }
