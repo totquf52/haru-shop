@@ -98,6 +98,8 @@ async function loadSales() {
     data: { labels, datasets: [{ label: "매출(원)", data: values, backgroundColor: "#8a5a2b" }] },
     options: {
       animation: false,
+      // 높이는 감싼 칸(240px)을 따른다
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true } }
     }
