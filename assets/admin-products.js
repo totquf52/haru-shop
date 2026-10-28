@@ -175,7 +175,10 @@ function paintProduct(id, data, message) {
       say(note, "저장하지 못했습니다.\n" + errorText(err), true);
       return false;
     }
-    group.replaceWith(paintProduct(id, { ...data, ...changes }, "저장했습니다."));
+    const next = { ...data, ...changes };
+    // 읽어 둔 목록에도 새 값을 적어 둔다 (다음에 필터 · 검색 · 정렬할 때 쓴다)
+    remember(id, next);
+    group.replaceWith(paintProduct(id, next, "저장했습니다."));
     return true;
   }
 
@@ -260,25 +263,88 @@ function paintProduct(id, data, message) {
   return group;
 }
 
-/* --- 상품 표 --- */
+/* --- 상품 표 ---
+   Firestore 에서는 조건 없이 한 번만 읽어 둔다 (골라 읽기 · 정렬해 읽기 · 개수 제한 없음).
+   필터 · 검색 · 정렬은 읽어 둔 목록에서 화면이 한다 - 단추를 눌러도 Firestore 에 다시 묻지 않는다. */
+// 읽어 둔 상품 전부 - { id, data }
+let products = [];
+// 지금 고른 필터 · 검색 · 정렬
+const view = { filter: "all", search: "", sort: "stock" };
+
+const countLine = document.querySelector("#product-count");
+const searchBox = document.querySelector("#product-search");
+const sortBox = document.querySelector("#product-sort");
+const filterBtns = document.querySelectorAll("[data-filter]");
+
+function remember(id, data) {
+  const item = products.find(p => p.id === id);
+  if (item) item.data = data;
+}
+
+const FILTERS = {
+  all: () => true,
+  soldout: d => d.stock === 0,
+  hidden: d => d.isVisible === false
+};
+
+const SORTS = {
+  // 재고가 숫자가 아닌 상품은 맨 뒤
+  stock: (a, b) => {
+    const x = typeof a.data.stock === "number" ? a.data.stock : Infinity;
+    const y = typeof b.data.stock === "number" ? b.data.stock : Infinity;
+    return x === y ? 0 : x < y ? -1 : 1;
+  },
+  name: (a, b) => String(a.data.name ?? "").localeCompare(String(b.data.name ?? ""), "ko")
+};
+
+// 필터 · 검색 · 정렬을 겹쳐서 표를 다시 그린다
+function render() {
+  table.querySelectorAll("tbody").forEach(el => el.remove());
+  // 영어는 대소문자를 가리지 않는다
+  const word = view.search.trim().toLowerCase();
+  const shown = products
+    .filter(p => FILTERS[view.filter](p.data))
+    .filter(p => !word || String(p.data.name ?? "").toLowerCase().includes(word))
+    .sort(SORTS[view.sort]);
+  shown.forEach(p => table.append(paintProduct(p.id, p.data)));
+  countLine.textContent = "지금 보이는 상품 " + shown.length + "개 / 전체 " + products.length + "개";
+}
+
 async function loadProducts() {
   table.querySelectorAll("tbody").forEach(el => el.remove());
+  countLine.textContent = "";
   say(listNote, "상품을 읽는 중…");
   try {
-    // 조건 없이 전부 - 숨긴 상품도
+    // 조건 없이 전부 - 숨긴 상품 · 품절 상품도
     const snap = await getDocs(collection(db, "products"));
-    snap.docs.forEach(d => table.append(paintProduct(d.id, d.data())));
-    say(listNote, "상품 " + snap.size + "개");
+    products = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+    say(listNote, "");
+    render();
   } catch (err) {
+    products = [];
     say(listNote, "상품을 읽지 못했습니다.\n" + errorText(err), true);
   }
 }
+
+filterBtns.forEach(btn => btn.addEventListener("click", () => {
+  view.filter = btn.dataset.filter;
+  // 고른 단추만 진하게
+  filterBtns.forEach(b => {
+    const on = b === btn;
+    b.className = on ? "btn" : "btn ghost";
+    b.setAttribute("aria-pressed", String(on));
+  });
+  render();
+}));
+searchBox.addEventListener("input", () => { view.search = searchBox.value; render(); });
+sortBox.addEventListener("change", () => { view.sort = sortBox.value; render(); });
 
 // admin.js 가 부른다 - 입구가 관리자이면 true
 export async function showProducts(show) {
   section.hidden = !show;
   if (!show) {
     table.querySelectorAll("tbody").forEach(el => el.remove());
+    products = [];
     return;
   }
   await loadProducts();

@@ -79,7 +79,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <p id="new-product-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
 
       <p id="product-list-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
-      <div style="overflow-x:auto;margin:12px 0 0">
+
+      <!-- 필터 · 검색 · 정렬 - 한 번 읽어 둔 상품에서 화면이 고른다 (Firestore 에 다시 묻지 않는다) -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:20px 0 0">
+        <button class="btn" type="button" data-filter="all" aria-pressed="true">전체</button>
+        <button class="btn ghost" type="button" data-filter="soldout" aria-pressed="false">품절만</button>
+        <button class="btn ghost" type="button" data-filter="hidden" aria-pressed="false">숨김만</button>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:12px 0 0">
+        <label>이름 검색
+          <input id="product-search" type="search">
+        </label>
+        <label>정렬
+          <select id="product-sort">
+            <option value="stock">재고 적은 순</option>
+            <option value="name">이름순</option>
+          </select>
+        </label>
+      </div>
+      <p id="product-count" style="margin:16px 0 0;font-size:14px;font-weight:700"></p>
+
+      <div style="overflow-x:auto;margin:8px 0 0">
         <table class="cart" id="product-table">
           <thead>
             <tr><th>사진</th><th>문서 ID</th><th>name</th><th>price</th><th>stock</th><th>품절</th><th>노출</th><th></th><th></th></tr>
