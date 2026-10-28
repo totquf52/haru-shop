@@ -62,7 +62,7 @@ async function judge(user, refresh) {
   if (!user) {
     loginLine.hidden = false;
     entry.hidden = true;
-    tabs.hidden = true;
+    tabs.style.display = "none";
     showProducts(false);
     showOrders(false);
     return;
@@ -81,7 +81,8 @@ async function judge(user, refresh) {
     : "";
   okBox.hidden = !allowed;
   denied.hidden = allowed;
-  tabs.hidden = !allowed;
+  // 탭 줄은 display 가 flex 라 hidden 만으로는 안 숨는다 - 직접 끈다
+  tabs.style.display = allowed ? "flex" : "none";
   await Promise.all([showProducts(allowed), showOrders(allowed)]);
 }
 

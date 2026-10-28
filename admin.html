@@ -58,7 +58,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
     <!-- 탭 - 입구가 「관리자: staff · admin」 일 때만 보인다 (assets/admin.js 가 연다) -->
-    <div id="admin-tabs" hidden role="tablist" style="display:flex;gap:8px;margin:36px 0 0">
+    <div id="admin-tabs" role="tablist" style="display:none;gap:8px;margin:36px 0 0">
       <button class="btn" type="button" role="tab" data-tab="products" aria-selected="true">상품</button>
       <button class="btn ghost" type="button" role="tab" data-tab="orders" aria-selected="false">주문</button>
     </div>
@@ -177,7 +177,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <tbody id="order-rows"></tbody>
         </table>
       </div>
-      <button class="btn ghost" type="button" id="btn-order-more" hidden style="margin:12px 0 0">더 보기</button>
+      <button class="btn ghost" type="button" id="btn-order-more" style="display:none;margin:12px 0 0">더 보기</button>
 
       <!-- 줄을 누르면 열린다 -->
       <div id="order-detail" hidden style="margin:24px 0 0;padding:16px;border:1px solid #ddd;border-radius:10px;overflow-wrap:anywhere"></div>

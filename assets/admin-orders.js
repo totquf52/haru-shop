@@ -48,6 +48,11 @@ const dialogText = document.querySelector("#order-dialog-text");
 // 마지막으로 받은 문서 - 「더 보기」가 여기서부터 읽는다
 let lastDoc = null;
 
+// .btn 은 display 가 정해져 있어 hidden 만으로는 안 숨는다 - 직접 끈다
+function showMore(show) {
+  moreBtn.style.display = show ? "" : "none";
+}
+
 function say(note, text, isError) {
   note.style.color = isError ? "#c0392b" : "";
   note.textContent = text;
@@ -100,13 +105,13 @@ async function loadOrders(more) {
     rows.replaceChildren();
     lastDoc = null;
   }
-  moreBtn.hidden = true;
+  showMore(false);
   say(listNote, "읽는 중…");
   try {
     const snap = await getDocs(orderQuery(more ? lastDoc : null));
     snap.docs.forEach(paintRow);
     if (snap.docs.length) lastDoc = snap.docs[snap.docs.length - 1];
-    moreBtn.hidden = snap.docs.length < PAGE;
+    showMore(snap.docs.length === PAGE);
     say(listNote, rows.children.length ? "" : "주문이 없습니다.");
   } catch (err) {
     fail(listNote, "주문을 읽지 못했습니다", err);
