@@ -80,3 +80,13 @@ test("손님이 주문하며 상품 재고를 하나 줄인다", async () => {
     setDoc(doc(손님.firestore(), "products/p1"), { stock: 9 }, { merge: true }),
   );
 });
+
+test("관리자가 하루 집계 문서를 읽는다", async () => {
+  const owner = testEnv.authenticatedContext("owner01", { role: "admin" });
+  await assertSucceeds(getDoc(doc(owner.firestore(), "dailyStats/20261028")));
+});
+
+test("손님이 하루 집계 문서를 읽는다", async () => {
+  const 사람 = testEnv.authenticatedContext("cust01");
+  await assertFails(getDoc(doc(사람.firestore(), "dailyStats/20261028")));
+});
