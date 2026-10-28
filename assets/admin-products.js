@@ -10,7 +10,7 @@
      (다운로드 URL 은 문서에 적지 않는다 - 표의 작은 사진을 보여 줄 때만 받는다)
    상품을 지우는 단추는 두지 않는다. 저장이 실패하면 오류 글을 줄이지 않고 그 줄 옆에 그대로 적는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
 // index.html 과 같은 Firebase 설정
@@ -170,12 +170,14 @@ function paintProduct(id, data, message) {
   async function save(changes) {
     say(note, "저장하는 중…");
     try {
-      await updateDoc(doc(db, "products", id), changes);
+      // 고친 시각 - 서버 시계로 같이 적는다
+      await updateDoc(doc(db, "products", id), { ...changes, updatedAt: serverTimestamp() });
     } catch (err) {
       say(note, "저장하지 못했습니다.\n" + errorText(err), true);
       return false;
     }
-    const next = { ...data, ...changes };
+    // 읽어 둔 목록의 updatedAt 은 「최근에 고친 순」 정렬에만 쓰는 지금 시각 (문서에는 서버 시각이 적힌다)
+    const next = { ...data, ...changes, updatedAt: Timestamp.now() };
     // 읽어 둔 목록에도 새 값을 적어 둔다 (다음에 필터 · 검색 · 정렬할 때 쓴다)
     remember(id, next);
     group.replaceWith(paintProduct(id, next, "저장했습니다."));
@@ -294,7 +296,13 @@ const SORTS = {
     const y = typeof b.data.stock === "number" ? b.data.stock : Infinity;
     return x === y ? 0 : x < y ? -1 : 1;
   },
-  name: (a, b) => String(a.data.name ?? "").localeCompare(String(b.data.name ?? ""), "ko")
+  name: (a, b) => String(a.data.name ?? "").localeCompare(String(b.data.name ?? ""), "ko"),
+  // updatedAt 이 늦은 것이 위 · updatedAt 이 없는 상품은 맨 아래
+  updated: (a, b) => {
+    const x = a.data.updatedAt instanceof Timestamp ? a.data.updatedAt.toMillis() : -Infinity;
+    const y = b.data.updatedAt instanceof Timestamp ? b.data.updatedAt.toMillis() : -Infinity;
+    return x === y ? 0 : x > y ? -1 : 1;
+  }
 };
 
 // 필터 · 검색 · 정렬을 겹쳐서 표를 다시 그린다
@@ -389,7 +397,9 @@ newSave.addEventListener("click", async () => {
       // 새 상품은 손님 목록에 숨겨 둔다
       isVisible: false,
       // 만든 시각 - 서버 시계로 적는다
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      // 고친 시각 - 서버 시계로 적는다
+      updatedAt: serverTimestamp()
     });
     let done = "만들었습니다. 문서 ID: " + docRef.id;
 
@@ -406,7 +416,7 @@ newSave.addEventListener("click", async () => {
         return;
       }
       // 3) 다 올라간 뒤에 imagePath 에 경로 글자를 적는다
-      await updateDoc(docRef, { imagePath: path });
+      await updateDoc(docRef, { imagePath: path, updatedAt: serverTimestamp() });
       done += " · 사진: " + path;
     }
 
