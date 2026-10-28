@@ -107,6 +107,14 @@ async function loadSales() {
   const missing = days.filter(d => !d.data).map(d => short(d.id));
   missingLine.textContent = missing.length ? "집계 없음 : " + missing.join(", ") : "";
 
+  // 최근 7일 합계 - 이미 읽은 일곱 장의 값만 더한다 (새로 읽지 않는다 · 문서 없는 날은 빼고)
+  const counted = days.filter(d => d.data);
+  const salesSum = counted.reduce((sum, d) => sum + Number(d.data.totalSales ?? 0), 0);
+  const orderSum = counted.reduce((sum, d) => sum + Number(d.data.orderCount ?? 0), 0);
+  document.querySelector("#sales-sum").textContent =
+    "최근 7일 합계 " + salesSum.toLocaleString("ko-KR") + "원 - 주문 " + orderSum + "건 " +
+    (missing.length ? "(집계 없는 날 " + missing.length + "일은 빼고 더함)" : "(집계 없는 날 없음)");
+
   // 표
   rows.replaceChildren();
   const hasCanceled = days.some(d => d.data && d.data.canceledCount !== undefined);
