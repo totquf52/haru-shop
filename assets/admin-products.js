@@ -403,6 +403,17 @@ undoBtn.addEventListener("click", async () => {
 /* --- 최근 활동 ---
    함수가 adminLogs 에 남긴 것을 at 이 최신인 것부터 열 줄 읽는다 (관리 화면은 adminLogs 에 쓰지 않는다).
    상품 이름은 이미 읽어 둔 products 에서 productId 로 찾는다. */
+// 바뀐 필드 이름을 보여 줄 때만 한국어로 바꾼다 (adminLogs 문서 값은 그대로). 목록에 없는 이름은 그대로
+const KEY_NAMES = {
+  deletedAt: "내림 표시",
+  isVisible: "노출",
+  stock: "재고",
+  price: "가격",
+  name: "이름",
+  summary: "설명",
+  imagePath: "사진"
+};
+
 const logRows = document.querySelector("#log-rows");
 const logNote = document.querySelector("#log-result");
 
@@ -420,7 +431,7 @@ async function loadLogs() {
         // 찾지 못하면 productId 를 그대로 적는다
         cell(item ? item.data.name : log.productId),
         cell(log.action),
-        cell(Array.isArray(log.changedKeys) ? log.changedKeys.join(", ") : log.changedKeys)
+        cell(Array.isArray(log.changedKeys) ? log.changedKeys.map(k => Object.hasOwn(KEY_NAMES, k) ? KEY_NAMES[k] : k).join(", ") : log.changedKeys)
       );
       logRows.append(tr);
     });
