@@ -32,6 +32,7 @@ const headline = document.querySelector("#sales-headline");
 const counted = document.querySelector("#sales-counted");
 const note = document.querySelector("#sales-result");
 const canvas = document.querySelector("#sales-chart");
+const sum = document.querySelector("#sales-sum");
 const rows = document.querySelector("#sales-rows");
 const canceledHead = document.querySelector("#sales-canceled-head");
 
@@ -120,6 +121,16 @@ function paintHeadline(days) {
   counted.textContent = "마지막으로 센 시각 : " + when(latest.data.countedAt);
 }
 
+// 차트 아래 한 줄 - 이미 읽어 둔 일곱 장만 더한다 (문서가 없는 날은 빼고 빠진 날 수를 괄호에)
+function paintSum(days) {
+  const have = days.filter(d => d.data);
+  const sales = have.reduce((n, d) => n + (Number(d.data.totalSales) || 0), 0);
+  const count = have.reduce((n, d) => n + (Number(d.data.orderCount) || 0), 0);
+  const missing = days.length - have.length;
+  sum.textContent = "최근 7일 합계 " + sales.toLocaleString("ko-KR") + "원 - 주문 " + count.toLocaleString("ko-KR") + "건 "
+    + (missing ? "(집계 없는 날 " + missing + "일은 빼고 더함)" : "(집계 없는 날 없음)");
+}
+
 async function loadSales() {
   say("읽는 중…");
   const days = lastDays();
@@ -135,6 +146,7 @@ async function loadSales() {
   say("");
   paintHeadline(days);
   paintChart(days);
+  paintSum(days);
   paintTable(days);
 }
 
@@ -146,6 +158,7 @@ export async function showSales(show) {
     rows.replaceChildren();
     headline.textContent = "";
     counted.textContent = "";
+    sum.textContent = "";
     return;
   }
   await loadSales();
