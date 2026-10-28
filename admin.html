@@ -57,6 +57,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="btn ghost" type="button" id="btn-recheck">다시 확인</button>
     </div>
 
+    <!-- 탭 - 입구가 「관리자: staff · admin」 일 때만 보인다 (assets/admin.js 가 연다) -->
+    <div id="admin-tabs" role="tablist" style="display:none;gap:8px;margin:36px 0 0">
+      <button class="btn" type="button" role="tab" data-tab="products" aria-selected="true">상품</button>
+      <button class="btn ghost" type="button" role="tab" data-tab="orders" aria-selected="false">주문</button>
+    </div>
+
+    <div id="tab-products">
     <!-- 상품 표 - 입구가 「관리자: staff · admin」 일 때만 보인다 (assets/admin-products.js 가 연다) -->
     <section id="admin-products" hidden style="margin:36px 0 0">
       <h3>상품</h3>
@@ -141,6 +148,53 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
       </div>
     </section>
+    </div>
+
+    <!-- 주문 탭 (assets/admin-orders.js 가 채운다) -->
+    <div id="tab-orders" hidden>
+    <section id="admin-orders" style="margin:24px 0 0">
+      <h3>주문</h3>
+
+      <!-- 고른 상태만 Firestore 에서 읽어 온다 -->
+      <label>상태
+        <select id="order-status">
+          <option value="all">전체</option>
+          <option value="paid">paid</option>
+          <option value="preparing">preparing</option>
+          <option value="shipped">shipped</option>
+          <option value="delivered">delivered</option>
+          <option value="canceled">canceled</option>
+        </select>
+      </label>
+
+      <p id="order-list-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
+
+      <div style="overflow-x:auto;margin:8px 0 0">
+        <table class="cart" id="order-table">
+          <thead>
+            <tr><th>주문 번호</th><th>금액</th><th>상태</th><th>주문 시각</th></tr>
+          </thead>
+          <tbody id="order-rows"></tbody>
+        </table>
+      </div>
+      <button class="btn ghost" type="button" id="btn-order-more" style="display:none;margin:12px 0 0">더 보기</button>
+
+      <!-- 줄을 누르면 열린다 -->
+      <div id="order-detail" hidden style="margin:24px 0 0;padding:16px;border:1px solid #ddd;border-radius:10px;overflow-wrap:anywhere"></div>
+      <p id="order-detail-result" role="status" aria-live="polite" style="margin:12px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere"></p>
+
+      <!-- 상태 버튼 확인 창 -->
+      <dialog id="order-dialog" style="max-width:360px;border:1px solid #ccc;border-radius:10px;padding:20px">
+        <form method="dialog">
+          <p id="order-dialog-text" style="margin:0 0 16px;overflow-wrap:anywhere"></p>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn ghost" type="submit" value="cancel">그만두기</button>
+            <button class="btn" type="submit" value="change">바꾸기</button>
+          </div>
+        </form>
+      </dialog>
+    </section>
+    </div>
   </div>
 </div></main>
 <script type="module" src="assets/admin.js"></script>

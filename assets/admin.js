@@ -10,6 +10,8 @@ import { getAuth, onAuthStateChanged, getIdTokenResult } from "https://www.gstat
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js";
 // 상품 표 - 입구가 관리자일 때만 연다
 import { showProducts } from "./admin-products.js";
+// 주문 탭 - 입구가 관리자일 때만 연다
+import { showOrders } from "./admin-orders.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -60,7 +62,9 @@ async function judge(user, refresh) {
   if (!user) {
     loginLine.hidden = false;
     entry.hidden = true;
+    tabs.style.display = "none";
     showProducts(false);
+    showOrders(false);
     return;
   }
   loginLine.hidden = true;
@@ -77,8 +81,22 @@ async function judge(user, refresh) {
     : "";
   okBox.hidden = !allowed;
   denied.hidden = allowed;
-  await showProducts(allowed);
+  // 탭 줄은 display 가 flex 라 hidden 만으로는 안 숨는다 - 직접 끈다
+  tabs.style.display = allowed ? "flex" : "none";
+  await Promise.all([showProducts(allowed), showOrders(allowed)]);
 }
+
+// 탭 - 「상품」 · 「주문」 을 눌러 오간다
+const tabs = document.querySelector("#admin-tabs");
+const panels = { products: document.querySelector("#tab-products"), orders: document.querySelector("#tab-orders") };
+tabs.querySelectorAll("[data-tab]").forEach(btn => btn.addEventListener("click", () => {
+  tabs.querySelectorAll("[data-tab]").forEach(b => {
+    const on = b === btn;
+    b.setAttribute("aria-selected", String(on));
+    b.classList.toggle("ghost", !on);
+  });
+  Object.entries(panels).forEach(([name, el]) => { el.hidden = name !== btn.dataset.tab; });
+}));
 
 // 버튼을 누르는 동안 막아 두고, 성공이든 실패든 끝나면 다시 연다
 function wire(btn, run) {
