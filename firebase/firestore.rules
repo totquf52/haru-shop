@@ -34,10 +34,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 주문 상태는 다음 상태로만 - 직원이 당기는 화살표 셋
+    function nextStatusOnly() {
+      let before = resource.data.status;
+      let after = request.resource.data.status;
+      return (before == "paid" && after == "preparing")
+          || (before == "preparing" && after == "shipped")
+          || (before == "shipped" && after == "delivered");
+    }
+
     match /orders/{orderId} {
       allow read: if isMine(resource.data.userId) || isStaff();
       allow create: if isMine(request.resource.data.userId);
-      allow update: if isStaff();
+      allow update: if isStaff()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "statusUpdatedAt"])
+                    && nextStatusOnly();
     }
 
     match /users/{userId} {

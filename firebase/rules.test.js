@@ -8,7 +8,7 @@ import {
   assertSucceeds,
   assertFails,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 
 // 2. 어느 규칙 판으로 돌릴지 고르는 한 줄
 const RULES = "firestore.rules";
@@ -89,4 +89,31 @@ test("관리자가 하루 집계 문서를 읽는다", async () => {
 test("손님이 하루 집계 문서를 읽는다", async () => {
   const 사람 = testEnv.authenticatedContext("cust01");
   await assertFails(getDoc(doc(사람.firestore(), "dailyStats/20261028")));
+});
+
+test("직원이 결제 완료 주문을 포장 시작으로 바꾼다", async () => {
+  const staff = testEnv.authenticatedContext("staff01", { role: "staff" });
+  await assertSucceeds(
+    updateDoc(doc(staff.firestore(), "orders/o1"), {
+      status: "preparing",
+      statusUpdatedAt: new Date(),
+    }),
+  );
+});
+
+test("직원이 배송 완료 주문을 결제 완료로 되돌린다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "orders/o9"), {
+      userId: "cust02",
+      totalPrice: 12000,
+      status: "delivered",
+    });
+  });
+  const staff = testEnv.authenticatedContext("staff01", { role: "staff" });
+  await assertFails(
+    updateDoc(doc(staff.firestore(), "orders/o9"), {
+      status: "paid",
+      statusUpdatedAt: new Date(),
+    }),
+  );
 });
