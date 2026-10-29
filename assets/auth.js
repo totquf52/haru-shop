@@ -3,7 +3,7 @@
    모든 화면이 <script type="module" src="assets/auth.js"> 로 불러 쓴다.
    이메일은 화면에만 적고 dataLayer 에도 콘솔에도 넣지 않는다. */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, reload, sendEmailVerification, GoogleAuthProvider, linkWithPopup } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, reload, sendEmailVerification, GoogleAuthProvider, linkWithPopup, deleteUser } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // index.html 과 같은 Firebase 설정
 const firebaseConfig = {
@@ -139,6 +139,47 @@ function paintLink(user) {
   };
 }
 
+/* --- 탈퇴 ([data-auth-withdraw]) ---
+   확인 창에서 「탈퇴하기」를 고르면 지금 로그인한 계정 자체를 Authentication 에서 지운다.
+   Firestore 문서는 여기서 지우지 않는다 - 계정이 지워지면 함수가 지운다.
+   - 최근에 다시 로그인해야 하면 안내를 보여 주고 로그인 화면으로 보낸다
+   - 끝나면 첫 화면으로 간다
+   - 그 밖의 오류는 줄이지 않고 콘솔에 그대로, 화면에는 한 줄만 */
+function paintWithdraw(user) {
+  const btn = document.querySelector("[data-auth-withdraw]");
+  const dialog = document.querySelector("[data-auth-withdraw-dialog]");
+  const note = document.querySelector("[data-auth-withdraw-result]");
+  if (!btn || !dialog) return;
+
+  btn.onclick = () => {
+    dialog.returnValue = "";
+    dialog.showModal();
+  };
+
+  dialog.onclose = async () => {
+    if (dialog.returnValue !== "withdraw") return;
+    btn.disabled = true;
+    if (note) note.textContent = "탈퇴하는 중…";
+    // 계정이 지워지는 순간 「로그인 화면으로 돌려보내기」가 끼어들지 않게 한다
+    leaving = true;
+    try {
+      await deleteUser(user);
+      location.href = "index.html";
+    } catch (err) {
+      leaving = false;
+      btn.disabled = false;
+      if (err.code === "auth/requires-recent-login") {
+        if (note) note.textContent = "보안을 위해 다시 로그인한 뒤 탈퇴해 주세요";
+        // 안내를 읽을 틈을 두고 로그인 화면으로 - 다시 로그인하면 마이페이지로 돌아온다
+        setTimeout(() => { location.href = "login.html?next=mypage.html"; }, 2000);
+        return;
+      }
+      console.error(err);
+      if (note) note.textContent = "탈퇴하지 못했습니다 - 자세한 오류는 브라우저 콘솔에 있습니다.";
+    }
+  };
+}
+
 /* --- 로그인한 사람에게만 보이는 것 ([data-auth-only]) --- */
 function paintMemberOnly(user) {
   document.querySelectorAll("[data-auth-only]").forEach(el => { el.hidden = !user; });
@@ -161,6 +202,7 @@ async function guardPage(user) {
   try { await reload(user); } catch (err) {}
   paintVerify(user);
   paintLink(user);
+  paintWithdraw(user);
 
   // 확인이 끝난 뒤에야 내용을 채우고 보여 준다
   document.querySelectorAll("[data-auth-email]").forEach(el => { el.textContent = user.email; });

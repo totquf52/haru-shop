@@ -59,6 +59,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <h2 style="margin-top:8px">내 주문</h2>
   <div id="order-list" style="margin:0 0 32px"></div>
   <button class="btn ghost" type="button" data-auth-logout>로그아웃</button>
+  <!-- 탈퇴 - 로그인 계정 자체를 지운다 (assets/auth.js 가 붙인다) · Firestore 문서는 화면이 아니라 함수가 지운다 -->
+  <div style="margin:32px 0 0">
+    <button class="btn ghost" type="button" data-auth-withdraw>탈퇴하기</button>
+    <p data-auth-withdraw-result role="status" aria-live="polite" style="margin:12px 0 0;font-size:13px;color:var(--sub)"></p>
+  </div>
+  <!-- 탈퇴 확인 창 -->
+  <dialog data-auth-withdraw-dialog style="max-width:360px;border:1px solid #ccc;border-radius:10px;padding:20px">
+    <form method="dialog">
+      <p style="margin:0 0 16px">탈퇴하면 이 계정으로 다시 로그인할 수 없습니다. 주문 기록은 법이 정한 기간 동안 남습니다.</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn ghost" type="submit" value="cancel">그만두기</button>
+        <button class="btn" type="submit" value="withdraw">탈퇴하기</button>
+      </div>
+    </form>
+  </dialog>
 </div></main>
 <footer class="site"><div class="wrap"></div>
 <!-- 처리방침 링크 - 위 .wrap 은 app.js 가 가게 이름으로 덮어쓰므로 따로 한 줄 -->
